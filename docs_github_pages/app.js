@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzj7BsmnH8WLBWh1z6iW5yhjDx5WKXVzLnEDoemlVU_i1T1hRuExBz5hyq6BO5QwXWUVw/exec";
 const STORAGE_KEY = "loja_itadigital_sheets_api_url";
 
 function getApiUrl() {
