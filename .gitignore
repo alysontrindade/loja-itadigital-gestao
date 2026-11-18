@@ -8,3 +8,4 @@ relatorios_06h/
 *.db
 .secret_key
 .env
+*.log
