@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Central WhatsApp" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Links Prontos de WhatsApp</h1>
+    <p>Revise o texto e clique no botão para abrir o WhatsApp Web/App já preenchido, sem risco ao número principal.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('extras.index') }}">Voltar</a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form method="get" action="{{ url_for('extras.whatsapp') }}">
+    <div class="row-3">
+      <div class="field">
+        <label for="mes_aniversario">Mês dos aniversariantes</label>
+        <select class="input" id="mes_aniversario" name="mes_aniversario">
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if mes_aniversario == m|string %}selected{% endif %}>Mês {{ "%02d"|format(m) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="grid-column:span 2;">
+        <label for="msg_aniv">Modelo de mensagem de aniversário (use {nome})</label>
+        <input class="input" id="msg_aniv" name="msg_aniv" type="text" value="{{ msg_aniv }}">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label for="msg_forn">Modelo de mensagem de cotação para fornecedores</label>
+      <input class="input" id="msg_forn" name="msg_forn" type="text" value="{{ msg_forn }}">
+    </div>
+    <button class="btn btn-secondary" type="submit">Atualizar links</button>
+  </form>
+</section>
+
+<div class="form-grid">
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Aniversariantes do Mês {{ "%02d"|format(mes_aniversario|int) }}</h2>
+    {% if aniversariantes %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th class="num">Data</th>
+            <th class="num">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in aniversariantes %}
+          <tr>
+            <td><strong>{{ a.nome }}</strong></td>
+            <td class="num">{{ a.aniversario }}</td>
+            <td class="num">
+              {% if a.link_personalizado %}
+                <a class="btn btn-primary btn-xs" href="{{ a.link_personalizado }}" target="_blank" rel="noopener">Abrir WhatsApp</a>
+              {% else %}
+                <span style="color:var(--muted);">Sem número</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Nenhum aniversariante cadastrado neste mês.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Fornecedores (Cotação com Itens Críticos)</h2>
+    {% if fornecedores %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Fornecedor</th>
+            <th>Tipo</th>
+            <th class="num">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in fornecedores %}
+          <tr>
+            <td><strong>{{ f.nome }}</strong></td>
+            <td>{{ f.tipo_label }}</td>
+            <td class="num">
+              {% if f.link_cotacao %}
+                <a class="btn btn-secondary btn-xs" href="{{ f.link_cotacao }}" target="_blank" rel="noopener">Enviar cotação</a>
+              {% else %}
+                <span style="color:var(--muted);">Sem WhatsApp</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Nenhum fornecedor ativo cadastrado.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

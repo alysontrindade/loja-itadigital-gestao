@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Nichos" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Nichos da Loja</h1>
+    <p>Organize seus nichos de mercado com etiquetas coloridas e acompanhe quantos produtos pertencem a cada um.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('nichos.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo nicho
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form class="filters" method="get" action="{{ url_for('nichos.listar') }}" style="margin-bottom:0;">
+    <div class="search">
+      <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+      <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar nicho por nome ou descrição...">
+    </div>
+    <select name="ativo" aria-label="Filtrar por status">
+      <option value="1" {% if filtros.ativo == '1' %}selected{% endif %}>Ativos</option>
+      <option value="0" {% if filtros.ativo == '0' %}selected{% endif %}>Inativos</option>
+      <option value="todos" {% if filtros.ativo == 'todos' %}selected{% endif %}>Todos</option>
+    </select>
+    <button class="btn btn-secondary" type="submit">Filtrar</button>
+    {% if filtros.busca or filtros.ativo != '1' %}
+      <a class="btn btn-ghost" href="{{ url_for('nichos.listar', limpar=1) }}">Limpar</a>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Nicho</th>
+          <th>Descrição</th>
+          <th class="num">Produtos</th>
+          <th>Status</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in itens %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center;">
+              <span class="niche-dot" style="background:{{ n.cor }};"></span>
+              <strong>{{ n.nome }}</strong>
+            </div>
+          </td>
+          <td style="color:var(--muted); max-width:44ch;">{{ n.descricao or '—' }}</td>
+          <td class="num">
+            <a class="link-accent num" href="{{ url_for('produtos.listar', nicho_id=n.id, ativo='todos') }}">{{ n.produtos_count }}</a>
+          </td>
+          <td>
+            {% if n.ativo %}
+              <span class="badge badge-ok">Ativo</span>
+            {% else %}
+              <span class="badge">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            <div class="actions-inline">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('nichos.editar', nicho_id=n.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('nichos.alternar', nicho_id=n.id) }}"
+                    onsubmit="return confirm('Confirmar alteração de status do nicho?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost btn-xs" type="submit">{{ 'Inativar' if n.ativo else 'Reativar' }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhum nicho encontrado</h3>
+    <p>Tente limpar os filtros ou cadastrar um novo nicho.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

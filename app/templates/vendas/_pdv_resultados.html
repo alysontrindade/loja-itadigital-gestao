@@ -1,0 +1,72 @@
+{% if catalogo.produtos or catalogo.kits %}
+<div class="results">
+  {% for item in catalogo.produtos %}
+  <button type="button"
+          class="result js-pdv-add"
+          data-tipo="produto"
+          data-id="{{ item.id }}"
+          data-nome="{{ item.nome }}"
+          data-sku="{{ item.sku }}"
+          data-barras="{{ item.codigo_barras }}"
+          data-preco="{{ item.preco_centavos }}"
+          data-estoque="{{ item.estoque_disponivel }}"
+          {% if item.estoque_disponivel <= 0 %}disabled title="Sem estoque disponível"{% endif %}>
+    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+      <div class="thumb">
+        {% if item.imagem_principal %}
+          <img src="{{ url_for('main.foto_thumb', arquivo=item.imagem_principal) }}" alt="{{ item.nome }}" loading="lazy">
+        {% else %}
+          {{ item.nome[:2]|upper }}
+        {% endif %}
+      </div>
+      <div style="min-width:0; text-align:left;">
+        <div class="prod-name">{{ item.nome }}</div>
+        <div class="prod-sku">{{ item.sku }}{% if item.codigo_barras %} · {{ item.codigo_barras }}{% endif %}</div>
+      </div>
+    </div>
+    <div style="text-align:right; flex-shrink:0;">
+      <strong class="num" style="display:block; color:var(--fg-2);">{{ item.preco_centavos|brl }}</strong>
+      {% if item.estoque_disponivel <= 0 %}
+        <span class="badge badge-danger">Esgotado</span>
+      {% else %}
+        <span class="badge badge-ok">{{ item.estoque_disponivel }} {{ item.unidade }}</span>
+      {% endif %}
+    </div>
+  </button>
+  {% endfor %}
+
+  {% for kit in catalogo.kits %}
+  <button type="button"
+          class="result js-pdv-add"
+          data-tipo="kit"
+          data-id="{{ kit.id }}"
+          data-nome="{{ kit.nome }}"
+          data-sku="{{ kit.sku }}"
+          data-barras=""
+          data-preco="{{ kit.preco_centavos }}"
+          data-estoque="{{ kit.estoque_disponivel }}"
+          {% if kit.estoque_disponivel <= 0 %}disabled title="Sem componentes em estoque para montar este kit"{% endif %}>
+    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+      <div class="thumb" style="background:var(--accent-tint); color:var(--accent-tint-fg);">KIT</div>
+      <div style="min-width:0; text-align:left;">
+        <div class="prod-name">{{ kit.nome }}</div>
+        <div class="prod-sku">Kit Combo · {{ kit.sku }}</div>
+      </div>
+    </div>
+    <div style="text-align:right; flex-shrink:0;">
+      <strong class="num" style="display:block; color:var(--fg-2);">{{ kit.preco_centavos|brl }}</strong>
+      {% if kit.estoque_disponivel <= 0 %}
+        <span class="badge badge-danger">Sem saldo</span>
+      {% else %}
+        <span class="badge badge-info">{{ kit.estoque_disponivel }} kit(s)</span>
+      {% endif %}
+    </div>
+  </button>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <h3>Nenhum produto ou kit encontrado</h3>
+  <p>Tente outro termo de busca, código de barras ou limpe o filtro de nicho.</p>
+</div>
+{% endif %}

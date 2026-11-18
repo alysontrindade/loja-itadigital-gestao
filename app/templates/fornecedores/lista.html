@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Fornecedores" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Fornecedores</h1>
+    <p>Gerencie distribuidores locais, atacadistas nacionais, importação da China e marketplaces com contato rápido.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('fornecedores.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo fornecedor
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form class="filters" method="get" action="{{ url_for('fornecedores.listar') }}" style="margin-bottom:0;">
+    <div class="search">
+      <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+      <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar por nome, contato, WhatsApp ou site...">
+    </div>
+    <select name="tipo" aria-label="Filtrar por tipo">
+      <option value="">Todos os tipos</option>
+      {% for chave, rotulo in tipos.items() %}
+        <option value="{{ chave }}" {% if filtros.tipo == chave %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    <select name="cidade" aria-label="Filtrar por cidade">
+      <option value="">Todas as cidades</option>
+      {% for c in cidades %}
+        <option value="{{ c }}" {% if filtros.cidade == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select name="ativo" aria-label="Filtrar por status">
+      <option value="1" {% if filtros.ativo == '1' %}selected{% endif %}>Ativos</option>
+      <option value="0" {% if filtros.ativo == '0' %}selected{% endif %}>Inativos</option>
+      <option value="todos" {% if filtros.ativo == 'todos' %}selected{% endif %}>Todos</option>
+    </select>
+    <button class="btn btn-secondary" type="submit">Filtrar</button>
+    {% if filtros.busca or filtros.tipo or filtros.cidade or filtros.ativo != '1' %}
+      <a class="btn btn-ghost" href="{{ url_for('fornecedores.listar', limpar=1) }}">Limpar</a>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Fornecedor</th>
+          <th>Tipo</th>
+          <th>Cidade/UF</th>
+          <th class="num">Prazo</th>
+          <th class="num">Pedido mín.</th>
+          <th>Contato</th>
+          <th class="num">Produtos</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in itens %}
+        <tr>
+          <td>
+            <strong>{{ f.nome }}</strong>
+            {% if not f.ativo %}<span class="badge" style="margin-left:6px;">Inativo</span>{% endif %}
+            {% if f.site %}
+              <div><a class="link-accent" href="{{ f.site }}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;">{{ f.site }}</a></div>
+            {% endif %}
+          </td>
+          <td><span class="badge badge-info">{{ f.tipo_label }}</span></td>
+          <td>{{ f.cidade_uf or '—' }}</td>
+          <td class="num">{{ f.prazo_dias }}d</td>
+          <td class="num">{{ f.pedido_minimo_centavos|brl }}</td>
+          <td>
+            <div>{{ f.contato or '—' }}</div>
+            {% if f.whatsapp_link %}
+              <a class="link-accent" href="{{ f.whatsapp_link }}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;">
+                WhatsApp: {{ f.whatsapp_formatado }}
+              </a>
+            {% endif %}
+          </td>
+          <td class="num">
+            <a class="link-accent num" href="{{ url_for('produtos.listar', fornecedor_id=f.id, ativo='todos') }}">{{ f.produtos_count }}</a>
+          </td>
+          <td class="num">
+            <div class="actions-inline">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('fornecedores.editar', fornecedor_id=f.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('fornecedores.alternar', fornecedor_id=f.id) }}"
+                    onsubmit="return confirm('Confirmar alteração de status do fornecedor?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost btn-xs" type="submit">{{ 'Inativar' if f.ativo else 'Reativar' }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhum fornecedor encontrado</h3>
+    <p>Cadastre seus fornecedores nacionais, locais ou importadores da China para vincular aos produtos.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

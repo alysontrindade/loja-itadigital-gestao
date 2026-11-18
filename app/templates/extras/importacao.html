@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Calculadora de Importação" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Calculadora de Importação &amp; Precificação</h1>
+    <p>Converta pedidos em dólar ou real, inclua imposto, frete e taxa do marketplace para descobrir o preço ideal.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('extras.index') }}">Voltar</a>
+  </div>
+</div>
+
+<div class="form-grid">
+  <section class="card card-pad">
+    <form method="post" action="{{ url_for('extras.importacao') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row-3">
+        <div class="field">
+          <label for="valor_lote">Valor total do lote</label>
+          <input class="input num" id="valor_lote" name="valor_lote" type="text" value="{{ dados.valor_lote }}" required>
+        </div>
+        <div class="field">
+          <label for="moeda">Moeda</label>
+          <select class="input" id="moeda" name="moeda">
+            <option value="USD" {% if dados.moeda == 'USD' %}selected{% endif %}>Dólar (USD)</option>
+            <option value="BRL" {% if dados.moeda == 'BRL' %}selected{% endif %}>Real (BRL)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cotacao_usd">Cotação USD (R$)</label>
+          <input class="input num" id="cotacao_usd" name="cotacao_usd" type="text" value="{{ dados.cotacao_usd }}">
+        </div>
+      </div>
+
+      <div class="row-3">
+        <div class="field">
+          <label for="frete_brl">Frete total (R$)</label>
+          <input class="input num" id="frete_brl" name="frete_brl" type="text" value="{{ dados.frete_brl }}">
+        </div>
+        <div class="field">
+          <label for="imposto_pct">Imposto / Taxa alfândega (%)</label>
+          <input class="input num" id="imposto_pct" name="imposto_pct" type="text" value="{{ dados.imposto_pct }}">
+        </div>
+        <div class="field">
+          <label for="outros_brl">Embalagem / outros (R$)</label>
+          <input class="input num" id="outros_brl" name="outros_brl" type="text" value="{{ dados.outros_brl }}">
+        </div>
+      </div>
+
+      <div class="row-3">
+        <div class="field">
+          <label for="quantidade">Qtd unidades no lote</label>
+          <input class="input num" id="quantidade" name="quantidade" type="number" min="1" value="{{ dados.quantidade }}" required>
+        </div>
+        <div class="field">
+          <label for="margem_alvo_pct">Margem líquida desejada (%)</label>
+          <input class="input num" id="margem_alvo_pct" name="margem_alvo_pct" type="text" value="{{ dados.margem_alvo_pct }}">
+        </div>
+        <div class="field">
+          <label for="taxa_venda_pct">Taxa maquininha / ML / Shopee (%)</label>
+          <input class="input num" id="taxa_venda_pct" name="taxa_venda_pct" type="text" value="{{ dados.taxa_venda_pct }}">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Calcular custo e preço sugerido</button>
+    </form>
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 12px; font-size:16px; color:var(--fg-2);">Resultado da Simulação</h2>
+    {% if resultado %}
+      {% if resultado.aviso %}
+        <div class="alert alert-warn">{{ resultado.aviso }}</div>
+      {% endif %}
+      <div class="summary-line">
+        <span>Mercadoria convertida</span>
+        <strong class="num">{{ resultado.base_brl_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line">
+        <span>Impostos</span>
+        <strong class="num">{{ resultado.imposto_brl_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line">
+        <span>Custo total do lote</span>
+        <strong class="num">{{ resultado.total_lote_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line">
+        <span>Custo unitário real</span>
+        <strong class="num">{{ resultado.custo_unit_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line" style="font-size:16px;">
+        <strong>Preço sugerido de venda</strong>
+        <strong class="num" style="color:var(--accent);">{{ resultado.preco_sugerido_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line">
+        <span>Taxa de venda estimada / un</span>
+        <span class="num">{{ resultado.taxa_unit_centavos|brl }}</span>
+      </div>
+      <div class="summary-line">
+        <span>Lucro líquido unitário</span>
+        <strong class="num" style="color:var(--success);">{{ resultado.lucro_unit_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line" style="border-bottom:0; padding-bottom:0;">
+        <span>Lucro estimado no lote ({{ resultado.quantidade }} un)</span>
+        <strong class="num" style="color:var(--success);">{{ resultado.lucro_lote_centavos|brl }}</strong>
+      </div>
+    {% else %}
+      <p style="margin:0; font-size:13.5px; color:var(--muted);">
+        Preencha os valores ao lado e clique em calcular para ver o custo unitário real e o preço sugerido.
+      </p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

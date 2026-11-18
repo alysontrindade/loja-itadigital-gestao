@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Estoque" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Posição de Estoque</h1>
+    <p>Toda entrada ou saída passa por movimentação auditada — confira saldos, valorização e registre ajustes ou perdas.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('estoque.movimentos') }}">Histórico de movimentos</a>
+    <a class="btn btn-primary" href="{{ url_for('compras.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Registrar compra
+    </a>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<section class="metrics" style="grid-template-columns:repeat(4, minmax(0, 1fr));">
+  <div class="card card-pad">
+    <div class="metric-label">Unidades no filtro</div>
+    <div class="metric-value num" style="font-size:22px;">{{ total_unidades }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Valor a custo</div>
+    <div class="metric-value num" style="font-size:22px;">{{ total_custo|brl }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Potencial de venda</div>
+    <div class="metric-value num" style="font-size:22px;">{{ total_venda|brl }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Itens em alerta</div>
+    <div class="metric-value num" style="font-size:22px; color:{{ 'var(--danger)' if criticos > 0 else 'var(--success)' }};">
+      {{ criticos }}
+    </div>
+  </div>
+</section>
+
+<div class="form-grid">
+  <div>
+    <section class="card filter-card">
+      <form method="get" action="{{ url_for('estoque.listar') }}">
+        <div class="filters" style="margin-bottom:0;">
+          <div class="search">
+            <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+            <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar por nome, SKU ou barras...">
+          </div>
+          <select name="status" aria-label="Filtrar status de estoque">
+            <option value="">Todos os saldos</option>
+            <option value="ok" {% if filtros.status == 'ok' %}selected{% endif %}>Estoque OK</option>
+            <option value="baixo" {% if filtros.status == 'baixo' %}selected{% endif %}>Estoque baixo</option>
+            <option value="zerado" {% if filtros.status == 'zerado' %}selected{% endif %}>Zerado</option>
+          </select>
+          <select name="nicho_id" aria-label="Filtrar por nicho">
+            <option value="">Todos os nichos</option>
+            {% for n in nichos %}
+              <option value="{{ n.id }}" {% if filtros.nicho_id == n.id|string %}selected{% endif %}>{{ n.nome }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-secondary" type="submit">Filtrar</button>
+          <a class="btn btn-ghost" href="{{ url_for('estoque.listar', limpar=1) }}">Limpar</a>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      {% if itens %}
+      <div class="table-wrap">
+        <table class="table-static">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th class="num">Atual</th>
+              <th class="num">Mínimo</th>
+              <th class="num">Valor Custo</th>
+              <th class="num">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in itens %}
+            <tr>
+              <td>
+                <a class="prod-name prod-name-link" href="{{ url_for('estoque.movimentos', produto_id=item.id) }}">{{ item.nome }}</a>
+                <div class="prod-sku">{{ item.sku }}</div>
+              </td>
+              <td class="num"><strong>{{ item.estoque_atual }}</strong> {{ item.unidade }}</td>
+              <td class="num">{{ item.estoque_minimo }}</td>
+              <td class="num">{{ item.valor_custo_total_centavos|brl }}</td>
+              <td class="num">
+                {% if item.estoque_status == 'zerado' %}
+                  <span class="badge badge-danger">Zerado</span>
+                {% elif item.estoque_status == 'baixo' %}
+                  <span class="badge badge-warn">Baixo</span>
+                {% else %}
+                  <span class="badge badge-ok">OK</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <h3>Nenhum item encontrado</h3>
+        <p>Ajuste os filtros ou cadastre novos produtos.</p>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <div>
+    <section class="card card-pad">
+      <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Ajuste Manual / Perda</h2>
+      <p style="margin:0 0 14px; font-size:13px; color:var(--muted);">
+        Correções de inventário ou perdas/avarias exigem motivo obrigatório e ficam registradas no histórico.
+      </p>
+
+      <form method="post" action="{{ url_for('estoque.ajustar') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+          <label for="aj-produto">Produto</label>
+          <select class="input" id="aj-produto" name="produto_id" required>
+            <option value="">Selecione o produto...</option>
+            {% for p in produtos %}
+              <option value="{{ p.id }}" {% if ajuste_dados.produto_id == p.id|string %}selected{% endif %}>
+                {{ p.nome }} ({{ p.sku }} · Atual: {{ p.estoque_atual }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row-3">
+          <div class="field" style="grid-column:span 2;">
+            <label for="aj-tipo">Tipo de movimento</label>
+            <select class="input" id="aj-tipo" name="tipo" required>
+              {% for chave, label in tipos_ajuste.items() %}
+                <option value="{{ chave }}" {% if ajuste_dados.tipo == chave %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="aj-qtd">Quantidade</label>
+            <input class="input num" id="aj-qtd" name="quantidade" type="number" min="1" step="1"
+                   value="{{ ajuste_dados.quantidade or '1' }}" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="aj-motivo">Motivo obrigatório</label>
+          <textarea class="input" id="aj-motivo" name="motivo" rows="2" required
+                    placeholder="Ex.: Contagem de balanço, item quebrado na vitrine, brinde...">{{ ajuste_dados.motivo }}</textarea>
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="width:100%;">Registrar movimentação</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

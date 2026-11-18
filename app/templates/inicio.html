@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Início" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Painel da Loja</h1>
+    <p>Sistema operacional completo — banco SQLite em modo WAL, cadastros, estoque auditado, compras e PDV ativos.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('vendas.pdv') }}">
+      <svg class="icon"><use href="#i-cart"/></svg>Abrir PDV (F2)
+    </a>
+    <a class="btn btn-secondary" href="{{ url_for('compras.novo') }}">
+      <svg class="icon"><use href="#i-truck"/></svg>Nova compra
+    </a>
+    <a class="btn btn-secondary" href="{{ url_for('produtos.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo produto
+    </a>
+    <form method="post" action="{{ url_for('main.executar_backup_manual') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost" type="submit">
+        <svg class="icon"><use href="#i-download"/></svg>Backup agora
+      </button>
+    </form>
+  </div>
+</div>
+
+<section class="metrics" aria-label="Indicadores operacionais">
+  <div class="card card-pad">
+    <div class="metric-label">Vendas hoje ({{ vendas_hoje.qtd }})</div>
+    <div class="metric-value num">{{ vendas_hoje.faturamento_centavos|brl }}</div>
+    <div class="metric-foot">
+      Lucro bruto hoje: <strong class="num">{{ vendas_hoje.lucro_centavos|brl }}</strong> ·
+      <a class="link-accent" href="{{ url_for('vendas.listar') }}">Ver vendas ({{ resumo.total_vendas }})</a>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Catálogo e kits</div>
+    <div class="metric-value num">{{ resumo.total_produtos }} / {{ resumo.total_kits }}</div>
+    <div class="metric-foot">
+      <a class="link-accent" href="{{ url_for('produtos.listar') }}">Produtos</a> ·
+      <a class="link-accent" href="{{ url_for('kits.listar') }}">Kits &amp; Combos</a>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Estoque crítico</div>
+    <div class="metric-value num" style="color:{{ 'var(--danger)' if estoque_critico_count > 0 else 'var(--success)' }};">
+      {{ estoque_critico_count }}
+    </div>
+    <div class="metric-foot">
+      <a class="link-accent" href="{{ url_for('estoque.listar', status='baixo') }}">Repor itens</a> ·
+      <a class="link-accent" href="{{ url_for('estoque.movimentos') }}">Movimentações</a>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Fornecedores e clientes</div>
+    <div class="metric-value num">{{ resumo.total_fornecedores }} / {{ resumo.total_clientes }}</div>
+    <div class="metric-foot">
+      <a class="link-accent" href="{{ url_for('fornecedores.listar') }}">Fornecedores</a> ·
+      <a class="link-accent" href="{{ url_for('clientes.listar') }}">Clientes</a>
+    </div>
+  </div>
+</section>
+
+{% if estoque_critico_itens %}
+<section class="card card-pad" style="margin-bottom:18px; border-color:color-mix(in srgb, var(--warn) 45%, var(--border));">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <svg class="icon" style="color:var(--warn);"><use href="#i-alert"/></svg>
+      <h2 style="margin:0; font-size:15.5px; color:var(--fg-2);">Alertas de Reposição de Estoque</h2>
+    </div>
+    <a class="btn btn-secondary btn-xs" href="{{ url_for('estoque.listar') }}">Abrir posição completa</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th class="num">Atual</th>
+          <th class="num">Mínimo</th>
+          <th class="num">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in estoque_critico_itens %}
+        <tr>
+          <td>
+            <a class="prod-name prod-name-link" href="{{ url_for('produtos.editar', produto_id=item.id) }}">{{ item.nome }}</a>
+            <div class="prod-sku">{{ item.sku }}</div>
+          </td>
+          <td class="num">{{ item.estoque_atual }} {{ item.unidade }}</td>
+          <td class="num">{{ item.estoque_minimo }} {{ item.unidade }}</td>
+          <td class="num">
+            {% if item.estoque_status == 'zerado' %}
+              <span class="badge badge-danger">Zerado</span>
+            {% else %}
+              <span class="badge badge-warn">Baixo</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="card card-pad">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+    <div>
+      <h2 style="margin:0; font-size:16px; color:var(--fg-2);">Os 10 Nichos da Loja</h2>
+      <p style="margin:4px 0 0; font-size:13.5px; color:var(--muted);">Clique em qualquer nicho para filtrar o catálogo de produtos.</p>
+    </div>
+    <span class="badge badge-ok">Etapa 5 — Operação ativa</span>
+  </div>
+
+  <div class="niche-grid">
+    {% for nicho in nichos %}
+    <a class="niche-card" href="{{ url_for('produtos.listar', nicho_id=nicho.id) }}" style="text-decoration:none;">
+      <span class="niche-dot" style="background: {{ nicho.cor }}; margin-top:6px;"></span>
+      <div>
+        <strong>{{ nicho.nome }}</strong>
+        <span>{{ nicho.descricao }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

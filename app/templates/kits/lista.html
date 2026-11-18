@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Kits & Combos" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Kits &amp; Combos de Presentes</h1>
+    <p>Monte combos em 3 faixas (Básico, Presente e Premium) com cálculo de economia e baixa automática dos componentes.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('kits.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo kit
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form method="get" action="{{ url_for('kits.listar') }}">
+    <div class="filters" style="margin-bottom:0;">
+      <div class="search">
+        <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+        <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar kit por nome ou descrição...">
+      </div>
+
+      <select name="nicho_id" aria-label="Filtrar por nicho">
+        <option value="">Todos os nichos</option>
+        {% for n in nichos %}
+          <option value="{{ n.id }}" {% if filtros.nicho_id == n.id|string %}selected{% endif %}>{{ n.nome }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="nivel" aria-label="Filtrar por faixa">
+        <option value="">Todas as faixas</option>
+        {% for chave, label in niveis.items() %}
+          <option value="{{ chave }}" {% if filtros.nivel == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="ativo" aria-label="Status">
+        <option value="1" {% if filtros.ativo == '1' %}selected{% endif %}>Ativos</option>
+        <option value="0" {% if filtros.ativo == '0' %}selected{% endif %}>Inativos</option>
+        <option value="todos" {% if filtros.ativo == 'todos' %}selected{% endif %}>Todos</option>
+      </select>
+
+      <button class="btn btn-secondary" type="submit">Filtrar</button>
+      <a class="btn btn-ghost" href="{{ url_for('kits.listar', limpar=1) }}">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<div class="filter-summary">
+  <span>{{ itens|length }} kit(s) listado(s)</span>
+</div>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Kit / Composição</th>
+          <th>Faixa &amp; Nicho</th>
+          <th class="num">Custo</th>
+          <th class="num">Preço Kit</th>
+          <th class="num">Margem</th>
+          <th class="num">Montagem</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k in itens %}
+        <tr>
+          <td>
+            <div>
+              <a class="prod-name prod-name-link" href="{{ url_for('kits.editar', kit_id=k.id) }}">{{ k.nome }}</a>
+              {% if not k.ativo %}<span class="badge" style="margin-left:6px;">Inativo</span>{% endif %}
+            </div>
+            <div class="prod-sku">
+              {% for comp in k.itens %}
+                {{ comp.quantidade }}x {{ comp.produto_nome }}{% if not loop.last %} · {% endif %}
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            <div class="niche-tags">
+              <span class="badge badge-info">{{ k.nivel_label }}</span>
+              <span class="badge">
+                <span class="niche-dot" style="background:{{ k.nicho_cor }}; margin-right:3px;"></span>{{ k.nicho_nome }}
+              </span>
+            </div>
+          </td>
+          <td class="num">{{ k.custo_total_centavos|brl }}</td>
+          <td class="num">
+            <strong>{{ k.preco_centavos|brl }}</strong>
+            {% if k.economia_centavos > 0 %}
+              <div class="prod-sku">Economia de {{ k.economia_centavos|brl }}</div>
+            {% endif %}
+          </td>
+          <td class="num">
+            <span class="badge {{ 'badge-ok' if k.margem_pct >= (cfg.margem_alvo_pct|float) else 'badge-warn' }}">
+              {{ "%.1f"|format(k.margem_pct)|replace(".", ",") }}%
+            </span>
+          </td>
+          <td class="num">
+            {% if k.estoque_disponivel <= 0 %}
+              <span class="badge badge-danger">0 disp.</span>
+            {% else %}
+              <span class="badge badge-ok">{{ k.estoque_disponivel }} kit(s)</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            <div class="actions-inline">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('kits.editar', kit_id=k.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('kits.alternar', kit_id=k.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost btn-xs" type="submit">
+                  {{ 'Reativar' if not k.ativo else 'Inativar' }}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhum kit encontrado</h3>
+    <p>Crie kits combinando canecas, pelúcias, embalagens ou eletrônicos para aumentar o ticket médio.</p>
+    <a class="btn btn-primary" href="{{ url_for('kits.novo') }}">Montar primeiro kit</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Movimentações de Estoque" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Histórico de Movimentações</h1>
+    <p>Rastreabilidade completa de entradas de compra, vendas, estornos, ajustes manuais e perdas.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('estoque.listar') }}">Voltar à posição</a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form method="get" action="{{ url_for('estoque.movimentos') }}">
+    <div class="filters" style="margin-bottom:0;">
+      <select name="produto_id" aria-label="Filtrar por produto">
+        <option value="">Todos os produtos</option>
+        {% for p in produtos %}
+          <option value="{{ p.id }}" {% if filtros.produto_id == p.id|string %}selected{% endif %}>{{ p.nome }} ({{ p.sku }})</option>
+        {% endfor %}
+      </select>
+
+      <select name="tipo" aria-label="Filtrar por tipo">
+        <option value="">Todos os tipos</option>
+        {% for chave, par in tipos_mov.items() %}
+          <option value="{{ chave }}" {% if filtros.tipo == chave %}selected{% endif %}>{{ par[0] }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="origem" aria-label="Filtrar por origem">
+        <option value="">Todas as origens</option>
+        {% for chave, label in origens_label.items() %}
+          <option value="{{ chave }}" {% if filtros.origem == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <input class="input" type="date" name="data_inicio" value="{{ filtros.data_inicio }}" aria-label="Data inicial" style="max-width:160px;">
+      <input class="input" type="date" name="data_fim" value="{{ filtros.data_fim }}" aria-label="Data final" style="max-width:160px;">
+
+      <button class="btn btn-secondary" type="submit">Filtrar</button>
+      <a class="btn btn-ghost" href="{{ url_for('estoque.movimentos', limpar=1) }}">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<div class="filter-summary">
+  <span>{{ itens|length }} movimento(s) exibido(s)</span>
+</div>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Produto</th>
+          <th>Tipo</th>
+          <th>Origem</th>
+          <th class="num">Qtd</th>
+          <th>Motivo / Referência</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in itens %}
+        <tr>
+          <td class="num" style="white-space:nowrap;">{{ m.criado_em[:19]|replace("T", " ") }}</td>
+          <td>
+            <strong>{{ m.produto_nome }}</strong>
+            <div class="prod-sku">{{ m.produto_sku }}</div>
+          </td>
+          <td>
+            <span class="badge {{ 'badge-ok' if m.sinal > 0 else 'badge-danger' if m.tipo == 'perda' else 'badge-warn' }}">
+              {{ m.tipo_label }}
+            </span>
+          </td>
+          <td>{{ m.origem_label }}</td>
+          <td class="num">
+            <strong style="color:{{ 'var(--success)' if m.sinal > 0 else 'var(--danger)' }};">
+              {{ '+' if m.sinal > 0 else '-' }}{{ m.quantidade }}
+            </strong>
+          </td>
+          <td style="color:var(--muted);">{{ m.motivo or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhuma movimentação encontrada</h3>
+    <p>As movimentações aparecerão aqui conforme compras, vendas ou ajustes forem registrados.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

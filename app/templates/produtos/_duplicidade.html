@@ -1,0 +1,7 @@
+{% if avisos %}
+  <div class="dup-hint" role="status">
+    {% for aviso in avisos %}
+      <div>{{ aviso }}</div>
+    {% endfor %}
+  </div>
+{% endif %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Clientes" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Clientes</h1>
+    <p>Base enxuta com contato rápido no WhatsApp, cidade e acompanhamento de aniversariantes.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('clientes.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo cliente
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form class="filters" method="get" action="{{ url_for('clientes.listar') }}" style="margin-bottom:0;">
+    <div class="search">
+      <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+      <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar cliente por nome, WhatsApp ou e-mail...">
+    </div>
+    <select name="cidade" aria-label="Filtrar por cidade">
+      <option value="">Todas as cidades</option>
+      {% for c in cidades %}
+        <option value="{{ c }}" {% if filtros.cidade == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select name="mes_aniversario" aria-label="Filtrar aniversariantes por mês">
+      <option value="">Aniversário (todos)</option>
+      {% for num, nome_mes in meses %}
+        <option value="{{ num }}" {% if filtros.mes_aniversario == num %}selected{% endif %}>Aniv.: {{ nome_mes }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-secondary" type="submit">Filtrar</button>
+    {% if filtros.busca or filtros.cidade or filtros.mes_aniversario %}
+      <a class="btn btn-ghost" href="{{ url_for('clientes.listar', limpar=1) }}">Limpar</a>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>WhatsApp</th>
+          <th>Cidade</th>
+          <th>Aniversário</th>
+          <th class="num">Compras</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in itens %}
+        <tr>
+          <td>
+            <strong>{{ c.nome }}</strong>
+            {% if c.email %}<div style="font-size:12.5px; color:var(--muted);">{{ c.email }}</div>{% endif %}
+          </td>
+          <td>
+            {% if c.whatsapp_link %}
+              <a class="link-accent" href="{{ c.whatsapp_link }}" target="_blank" rel="noopener noreferrer">
+                {{ c.whatsapp_formatado }}
+              </a>
+            {% else %}
+              <span style="color:var(--muted);">—</span>
+            {% endif %}
+          </td>
+          <td>{{ c.cidade or '—' }}</td>
+          <td>
+            {% if c.aniversario %}
+              <span class="badge badge-info"><svg class="icon" style="width:13px;height:13px;"><use href="#i-cake"/></svg>{{ c.aniversario }}</span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="num">{{ c.vendas_count }}</td>
+          <td class="num">
+            <a class="btn btn-secondary btn-xs" href="{{ url_for('clientes.editar', cliente_id=c.id) }}">Editar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhum cliente encontrado</h3>
+    <p>Cadastre seus clientes para agilizar vendas futuras e campanhas no WhatsApp.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

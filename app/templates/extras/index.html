@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Ferramentas Extras" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Ferramentas Extras</h1>
+    <p>Utilitários práticos para o dia a dia da loja: etiquetas, WhatsApp com links prontos, simulação de importação e carga em lote.</p>
+  </div>
+</div>
+
+<section class="niche-grid" style="margin-top:0;">
+  <a class="card card-pad" href="{{ url_for('extras.etiquetas') }}" style="text-decoration:none; color:inherit;">
+    <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Etiquetas de Preço e Barras</h2>
+    <p style="margin:0; font-size:13.5px; color:var(--muted);">
+      Gere folhas prontas para impressão com nome, SKU, preço e código de barras local sem depender de internet.
+    </p>
+  </a>
+
+  <a class="card card-pad" href="{{ url_for('extras.whatsapp') }}" style="text-decoration:none; color:inherit;">
+    <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Central de Links WhatsApp</h2>
+    <p style="margin:0; font-size:13.5px; color:var(--muted);">
+      Mensagens pré-preenchidas com links prontos (wa.me) para aniversariantes e cotação de estoque baixo com fornecedores.
+    </p>
+  </a>
+
+  <a class="card card-pad" href="{{ url_for('extras.importacao') }}" style="text-decoration:none; color:inherit;">
+    <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Calculadora de Importação</h2>
+    <p style="margin:0; font-size:13.5px; color:var(--muted);">
+      Simule câmbio (USD/BRL), imposto, frete, taxas de marketplace e descubra o preço ideal para atingir sua margem alvo.
+    </p>
+  </a>
+
+  <a class="card card-pad" href="{{ url_for('extras.importar') }}" style="text-decoration:none; color:inherit;">
+    <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Importar Produtos em Lote</h2>
+    <p style="margin:0; font-size:13.5px; color:var(--muted);">
+      Baixe a planilha modelo Excel (.xlsx) e cadastre dezenas de produtos de uma só vez via .xlsx ou .csv com proteção anti-duplicidade.
+    </p>
+  </a>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "auth/base_auth.html" %}
+{% block title %}Primeiro Acesso — {{ cfg.nome_loja }}{% endblock %}
+{% block content %}
+<div class="auth-head">
+  <div class="brand-mark">LI</div>
+  <div>
+    <h1>Configuração Inicial</h1>
+    <p>Crie sua senha de acesso local para começar a usar a loja.</p>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('auth.primeiro_acesso') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field">
+    <label for="nome_loja">Nome da loja</label>
+    <input class="input" id="nome_loja" name="nome_loja" type="text"
+           value="{{ request.form.get('nome_loja', cfg.nome_loja) }}" required>
+  </div>
+
+  <div class="row-2">
+    <div class="field">
+      <label for="nome">Seu nome</label>
+      <input class="input" id="nome" name="nome" type="text"
+             value="{{ request.form.get('nome', '') }}" placeholder="Ex.: Alyson" required autofocus>
+    </div>
+    <div class="field">
+      <label for="login">Usuário de login</label>
+      <input class="input" id="login" name="login" type="text"
+             value="{{ request.form.get('login', 'admin') }}" required>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="senha">Senha de acesso</label>
+    <input class="input" id="senha" name="senha" type="password" minlength="6" required>
+    <span class="hint">Mínimo de 6 caracteres. Armazenada localmente com hash scrypt.</span>
+  </div>
+
+  <div class="field">
+    <label for="confirmar_senha">Confirmar senha</label>
+    <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" minlength="6" required>
+  </div>
+
+  <button class="btn btn-primary btn-lg btn-block" type="submit">
+    Salvar senha e abrir sistema
+  </button>
+</form>
+{% endblock %}

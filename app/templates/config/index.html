@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Configurações" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Configurações do Sistema</h1>
+    <p>Escolha o tema visual, personalize parâmetros da loja, gerencie sua senha e execute ou restaure backups ZIP.</p>
+  </div>
+</div>
+
+<div class="form-grid">
+  <div>
+    <section class="card card-pad" style="margin-bottom:16px;">
+      <h2 style="margin:0 0 12px; font-size:16px; color:var(--fg-2);">Aparência e Preferências</h2>
+      <form method="post" action="{{ url_for('main.salvar_configuracoes') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+          <span class="field-label">Tema de visualização</span>
+          <div class="theme-cards">
+            <label class="theme-radio">
+              <input type="radio" name="tema" value="claro" {% if cfg.tema == 'claro' %}checked{% endif %}>
+              <span class="theme-card" aria-pressed="{{ 'true' if cfg.tema == 'claro' else 'false' }}">
+                <span class="theme-swatch">
+                  <span style="background:#ffffff"></span>
+                  <span style="background:#f7f7f5"></span>
+                  <span style="background:#2383e2"></span>
+                </span>
+                <strong>Claro</strong>
+                <span style="display:block; font-size:12.5px; color:var(--muted);">Minimalismo limpo e leve.</span>
+              </span>
+            </label>
+
+            <label class="theme-radio">
+              <input type="radio" name="tema" value="escuro" {% if cfg.tema == 'escuro' %}checked{% endif %}>
+              <span class="theme-card" aria-pressed="{{ 'true' if cfg.tema == 'escuro' else 'false' }}">
+                <span class="theme-swatch">
+                  <span style="background:#191918"></span>
+                  <span style="background:#202020"></span>
+                  <span style="background:#3b93ee"></span>
+                </span>
+                <strong>Escuro</strong>
+                <span style="display:block; font-size:12.5px; color:var(--muted);">Conforto noturno em balcão.</span>
+              </span>
+            </label>
+
+            <label class="theme-radio">
+              <input type="radio" name="tema" value="contraste" {% if cfg.tema == 'contraste' %}checked{% endif %}>
+              <span class="theme-card" aria-pressed="{{ 'true' if cfg.tema == 'contraste' else 'false' }}">
+                <span class="theme-swatch">
+                  <span style="background:#ffffff"></span>
+                  <span style="background:#111111"></span>
+                  <span style="background:#0058ad"></span>
+                </span>
+                <strong>Alto contraste</strong>
+                <span style="display:block; font-size:12.5px; color:var(--muted);">Máxima nitidez e leitura.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="nome_loja">Nome da loja</label>
+          <input class="input" id="nome_loja" name="nome_loja" type="text" value="{{ cfg.nome_loja }}" required>
+        </div>
+
+        <div class="row-2">
+          <div class="field">
+            <label for="margem_alvo_pct">Margem alvo padrão (%)</label>
+            <input class="input num" id="margem_alvo_pct" name="margem_alvo_pct" type="number" min="0" max="95" value="{{ cfg.margem_alvo_pct }}">
+          </div>
+          <div class="field">
+            <label for="sessao_expira_minutos">Expiração por inatividade (min)</label>
+            <input class="input num" id="sessao_expira_minutos" name="sessao_expira_minutos" type="number" min="5" max="1440" value="{{ cfg.sessao_expira_minutos }}">
+          </div>
+        </div>
+
+        <div class="form-foot">
+          <button class="btn btn-primary" type="submit">Salvar preferências</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div>
+          <h2 style="margin:0; font-size:16px; color:var(--fg-2);">Backups Locais e no Drive</h2>
+          <p style="margin:2px 0 0; font-size:13px; color:var(--muted);">Pasta de destino: <code>{{ backup_dir }}</code></p>
+        </div>
+        <form method="post" action="{{ url_for('main.executar_backup_manual') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon"><use href="#i-download"/></svg>Fazer backup agora
+          </button>
+        </form>
+      </div>
+
+      {% if backups %}
+      <div class="table-wrap">
+        <table class="table-static">
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Data</th>
+              <th class="num">Tamanho</th>
+              <th class="num">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bkp in backups %}
+            <tr>
+              <td><code>{{ bkp.name }}</code></td>
+              <td>{{ bkp.modified_at }}</td>
+              <td class="num">{{ bkp.size_kb }} KB</td>
+              <td class="num">
+                <form method="post" action="{{ url_for('main.restaurar_backup_rota') }}"
+                      onsubmit="return confirm('Restaurar este backup? Uma cópia de segurança do estado atual será criada antes.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="arquivo" value="{{ bkp.name }}">
+                  <button class="btn btn-secondary" type="submit">Restaurar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:24px 12px;">
+        <p style="margin:0;">Nenhum arquivo ZIP gerado ainda. Clique em <b>Fazer backup agora</b> para criar o primeiro.</p>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <div>
+    <section class="card card-pad" style="margin-bottom:16px;">
+      <h2 style="margin:0 0 12px; font-size:16px; color:var(--fg-2);">Segurança e Senha</h2>
+      <form method="post" action="{{ url_for('main.alterar_senha') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="senha_atual">Senha atual</label>
+          <input class="input" id="senha_atual" name="senha_atual" type="password" required>
+        </div>
+        <div class="field">
+          <label for="nova_senha">Nova senha</label>
+          <input class="input" id="nova_senha" name="nova_senha" type="password" minlength="6" required>
+        </div>
+        <div class="field">
+          <label for="confirmar_nova_senha">Confirmar nova senha</label>
+          <input class="input" id="confirmar_nova_senha" name="confirmar_nova_senha" type="password" minlength="6" required>
+        </div>
+        <button class="btn btn-secondary btn-block" type="submit">Atualizar senha</button>
+      </form>
+      <p style="margin:12px 0 0; font-size:12.5px; color:var(--muted);">
+        Banco ativo em: <code>{{ data_dir }}</code>
+      </p>
+    </section>
+
+    <section class="card card-pad">
+      <h2 style="margin:0 0 8px; font-size:16px; color:var(--fg-2);">Auditoria Recente</h2>
+      {% if logs %}
+      <ul class="list">
+        {% for item in logs %}
+        <li style="padding:8px 0; display:block;">
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <strong style="font-size:13px;">{{ item.acao }}</strong>
+            <span class="sub">{{ item.criado_em[:19].replace('T', ' ') }}</span>
+          </div>
+          <div class="sub">{{ item.detalhes }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p style="font-size:13px; color:var(--muted); margin:0;">Nenhum evento registrado.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

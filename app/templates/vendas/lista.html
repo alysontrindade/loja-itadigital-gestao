@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Vendas Realizadas" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Histórico de Vendas</h1>
+    <p>Consulte pedidos por canal, forma de pagamento, período e acesse o comprovante ou estorno com 1 clique.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('vendas.pdv') }}">
+      <svg class="icon"><use href="#i-cart"/></svg>Nova venda (F2)
+    </a>
+  </div>
+</div>
+
+<section class="metrics" style="grid-template-columns:repeat(3, minmax(0, 1fr));">
+  <div class="card card-pad">
+    <div class="metric-label">Vendas concluídas (filtro)</div>
+    <div class="metric-value num" style="font-size:22px;">{{ qtd_concluidas }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Faturamento</div>
+    <div class="metric-value num" style="font-size:22px;">{{ total_faturado|brl }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Lucro bruto apurado</div>
+    <div class="metric-value num" style="font-size:22px; color:var(--success);">{{ total_lucro|brl }}</div>
+  </div>
+</section>
+
+<section class="card filter-card">
+  <form method="get" action="{{ url_for('vendas.listar') }}">
+    <div class="filters" style="margin-bottom:0;">
+      <div class="search">
+        <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+        <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar por #número, cliente ou observação...">
+      </div>
+
+      <select name="canal" aria-label="Filtrar canal">
+        <option value="">Todos os canais</option>
+        {% for chave, label in canais.items() %}
+          <option value="{{ chave }}" {% if filtros.canal == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="forma_pagamento" aria-label="Filtrar pagamento">
+        <option value="">Todas as formas</option>
+        {% for chave, label in formas.items() %}
+          <option value="{{ chave }}" {% if filtros.forma_pagamento == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="status" aria-label="Filtrar status">
+        <option value="">Todos os status</option>
+        {% for chave, label in status_opcoes.items() %}
+          <option value="{{ chave }}" {% if filtros.status == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <input class="input" type="date" name="data_inicio" value="{{ filtros.data_inicio }}" aria-label="Data inicial" style="max-width:160px;">
+      <input class="input" type="date" name="data_fim" value="{{ filtros.data_fim }}" aria-label="Data final" style="max-width:160px;">
+
+      <button class="btn btn-secondary" type="submit">Filtrar</button>
+      <a class="btn btn-ghost" href="{{ url_for('vendas.listar', limpar=1) }}">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<div class="filter-summary">
+  <span>{{ itens|length }} venda(s) exibida(s)</span>
+</div>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th># Venda</th>
+          <th>Data / Hora</th>
+          <th>Cliente</th>
+          <th>Canal &amp; Pagamento</th>
+          <th class="num">Total</th>
+          <th class="num">Lucro Bruto</th>
+          <th class="num">Status</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in itens %}
+        <tr>
+          <td class="num"><strong>#{{ v.id }}</strong></td>
+          <td class="num" style="white-space:nowrap;">{{ v.data[:16]|replace("T", " ") }}</td>
+          <td>
+            <a class="prod-name prod-name-link" href="{{ url_for('vendas.detalhe', venda_id=v.id) }}">{{ v.cliente_nome }}</a>
+            <div class="prod-sku">{{ v.qtd_itens }} unidade(s)</div>
+          </td>
+          <td>{{ v.canal_label }} · {{ v.forma_label }}</td>
+          <td class="num"><strong>{{ v.total_centavos|brl }}</strong></td>
+          <td class="num">{{ v.lucro_centavos|brl }}</td>
+          <td class="num">
+            {% if v.status == 'concluida' %}
+              <span class="badge badge-ok">{{ v.status_label }}</span>
+            {% else %}
+              <span class="badge badge-danger">{{ v.status_label }}</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            <a class="btn btn-secondary btn-xs" href="{{ url_for('vendas.detalhe', venda_id=v.id) }}">Comprovante</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhuma venda encontrada</h3>
+    <p>Abra o PDV para registrar a primeira venda da loja.</p>
+    <a class="btn btn-primary" href="{{ url_for('vendas.pdv') }}">Abrir PDV</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

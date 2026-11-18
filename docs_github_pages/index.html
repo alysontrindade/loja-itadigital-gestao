@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loja ItaDigital — Gestão &amp; Notas de Impressão 3D</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">ID</div>
+      <div>
+        <h1>Loja ItaDigital &amp; Ita Arte 3D</h1>
+        <p>GitHub Pages + Planilha Google + Robô Local 06h</p>
+      </div>
+    </div>
+    <div class="status-pill" id="connStatus">Conectando à Planilha Google...</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="ideias">💡 Ideias de Impressão 3D</button>
+    <button class="tab" data-tab="produtos">📦 Produtos &amp; Estoque</button>
+    <button class="tab" data-tab="vendas">🛒 Vendas</button>
+    <button class="tab" data-tab="config">⚙️ Conectar Planilha Google</button>
+  </nav>
+
+  <main class="container">
+    <!-- TAB IDEIAS 3D -->
+    <section id="tab-ideias" class="panel active">
+      <div class="card">
+        <h2>Nova Nota / Ideia de Impressão 3D</h2>
+        <p class="muted">Digite apenas o nome da peça ou ideia pelo celular ou computador. O robô local das 06h busca no MakerWorld, Mercado Livre e Shopee, confere o tamanho comercial e fatia automaticamente.</p>
+        <form id="formIdeia" class="form-row">
+          <input id="termoIdeia" type="text" required placeholder="Ex.: suporte controle ps5, vaso robert plant, placa pix..." />
+          <input id="obsIdeia" type="text" placeholder="Observação rápida (opcional)" />
+          <button type="submit" class="btn-primary">+ Anotar Ideia</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Ideias Registradas (<span id="qtdIdeias">0</span>)</h2>
+          <button class="btn-outline" id="btnRecarregar">↻ Atualizar Dados</button>
+        </div>
+        <div id="listaIdeias" class="cards-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB PRODUTOS -->
+    <section id="tab-produtos" class="panel">
+      <div class="card">
+        <h2>Cadastrar Produto Rápido</h2>
+        <form id="formProduto" class="form-grid">
+          <input id="prodNome" type="text" required placeholder="Nome do produto" />
+          <input id="prodSku" type="text" placeholder="SKU (opcional)" />
+          <input id="prodNicho" type="text" placeholder="Nicho (ex.: 3D, Presentes)" />
+          <input id="prodCusto" type="number" step="0.01" placeholder="Custo (R$)" />
+          <input id="prodPreco" type="number" step="0.01" required placeholder="Preço Venda (R$)" />
+          <input id="prodEstoque" type="number" placeholder="Estoque" value="1" />
+          <button type="submit" class="btn-primary">+ Salvar Produto</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Catálogo na Planilha (<span id="qtdProdutos">0</span>)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>SKU</th><th>Nome</th><th>Nicho</th><th>Custo</th><th>Preço</th><th>Estoque</th></tr>
+            </thead>
+            <tbody id="tbodyProdutos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB VENDAS -->
+    <section id="tab-vendas" class="panel">
+      <div class="card">
+        <h2>Registrar Venda</h2>
+        <form id="formVenda" class="form-grid">
+          <input id="vendaCliente" type="text" placeholder="Cliente (opcional)" value="Consumidor Final" />
+          <input id="vendaItens" type="text" required placeholder="Itens vendidos (ex.: 1x Porta Controle 3D)" />
+          <select id="vendaPagamento">
+            <option value="pix">Pix</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="cartao_credito">Cartão Crédito</option>
+            <option value="cartao_debito">Cartão Débito</option>
+          </select>
+          <select id="vendaCanal">
+            <option value="loja">Loja Física</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="shopee">Shopee</option>
+            <option value="mercadolivre">Mercado Livre</option>
+          </select>
+          <input id="vendaTotal" type="number" step="0.01" required placeholder="Total (R$)" />
+          <button type="submit" class="btn-primary">✓ Lançar Venda</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Últimas Vendas</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Data</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Canal</th><th>Total</th></tr>
+            </thead>
+            <tbody id="tbodyVendas"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB CONFIG -->
+    <section id="tab-config" class="panel">
+      <div class="card">
+        <h2>Conectar Banco de Dados em Planilha Google</h2>
+        <p class="muted">Cole abaixo a URL do App da Web implantado no Google Apps Script (<code>cloud/google_sheets_backend.gs</code>). Ela fica salva no navegador e também pode ser passada na URL como <code>?api=SUA_URL</code>.</p>
+        <form id="formConfig" class="form-row">
+          <input id="apiUrlInput" type="url" required placeholder="https://script.google.com/macros/s/.../exec" />
+          <button type="submit" class="btn-primary">Salvar Conexão</button>
+        </form>
+        <p id="linkPlanilhaWrap" style="margin-top:12px;"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "PDV / Caixa (F2)" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>PDV / Frente de Caixa</h1>
+    <p>Bipe o código de barras ou clique no produto/kit para lançar no carrinho. Pressione <kbd>F9</kbd> para finalizar.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('vendas.listar') }}">Histórico de vendas</a>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<div class="pos">
+  <div>
+    <section class="card card-pad" style="margin-bottom:14px;">
+      <div class="pos-search">
+        <div class="search" style="flex:1;">
+          <svg class="icon" style="color:var(--muted)"><use href="#i-barcode"/></svg>
+          <input type="search"
+                 id="pdv-busca"
+                 name="busca"
+                 value="{{ busca }}"
+                 placeholder="Buscar por nome, SKU ou bipar código de barras (Enter)..."
+                 autofocus
+                 hx-get="{{ url_for('vendas.buscar_pdv') }}"
+                 hx-target="#pdv-resultados"
+                 hx-include="#pdv-nicho-id"
+                 hx-trigger="input changed delay:180ms">
+        </div>
+        <input type="hidden" id="pdv-nicho-id" name="nicho_id" value="{{ nicho_id }}">
+      </div>
+
+      <div class="pos-chips" style="margin-top:10px;">
+        <button type="button"
+                class="chip js-pdv-nicho {{ 'active' if not nicho_id else '' }}"
+                data-nicho-id=""
+                hx-get="{{ url_for('vendas.buscar_pdv', nicho_id='') }}"
+                hx-target="#pdv-resultados"
+                hx-include="#pdv-busca">
+          Todos os nichos
+        </button>
+        {% for n in nichos %}
+        <button type="button"
+                class="chip js-pdv-nicho {{ 'active' if nicho_id == n.id|string else '' }}"
+                data-nicho-id="{{ n.id }}"
+                hx-get="{{ url_for('vendas.buscar_pdv', nicho_id=n.id) }}"
+                hx-target="#pdv-resultados"
+                hx-include="#pdv-busca">
+          <span class="niche-dot" style="background:{{ n.cor }};"></span>{{ n.nome }}
+        </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div id="pdv-resultados">
+      {% include "vendas/_pdv_resultados.html" %}
+    </div>
+  </div>
+
+  <aside class="card card-pad cart">
+    <form id="pdv-form" method="post" action="{{ url_for('vendas.finalizar_pdv') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" id="pdv-itens-json" name="itens_json" value="[]">
+      <input type="hidden" id="pdv-forma" name="forma_pagamento" value="pix">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+        <h2 style="margin:0; font-size:16px; color:var(--fg-2);">Carrinho</h2>
+        <button class="btn btn-ghost btn-xs" type="button" id="pdv-limpar">Limpar</button>
+      </div>
+
+      <div class="cart-items" id="pdv-cart-items">
+        <div class="empty" style="padding:20px 10px;">
+          <p style="margin:0; font-size:13px;">Nenhum item adicionado ainda.</p>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label for="pdv-cliente">Cliente (opcional)</label>
+        <select class="input" id="pdv-cliente" name="cliente_id">
+          <option value="">Consumidor não identificado</option>
+          {% for c in clientes %}
+            <option value="{{ c.id }}">{{ c.nome }}{% if c.whatsapp_exibicao %} ({{ c.whatsapp_exibicao }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row-3" style="grid-template-columns:1fr 1fr;">
+        <div class="field">
+          <label for="pdv-canal">Canal da venda</label>
+          <select class="input" id="pdv-canal" name="canal">
+            {% for chave, label in canais.items() %}
+              <option value="{{ chave }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="pdv-desconto">Desconto (R$)</label>
+          <input class="input num discount-input" id="pdv-desconto" name="desconto" type="text" value="0,00">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Forma de pagamento</label>
+        <div class="pay-grid">
+          {% for chave, label in formas.items() %}
+          <button type="button"
+                  class="pay js-pdv-pay {{ 'active' if chave == 'pix' else '' }}"
+                  data-forma="{{ chave }}">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field" id="pdv-troco-box" style="display:none;">
+        <label for="pdv-recebido">
+          <span>Valor recebido (dinheiro R$)</span>
+          <strong class="num" id="pdv-troco-valor">Troco: R$ 0,00</strong>
+        </label>
+        <input class="input num" id="pdv-recebido" type="text" placeholder="0,00">
+      </div>
+
+      <div class="field">
+        <label for="pdv-obs">Observações do pedido (opcional)</label>
+        <input class="input" id="pdv-obs" name="observacoes" type="text" placeholder="Ex.: Embrulhar para presente">
+      </div>
+
+      <div class="totals">
+        <div class="summary-line">
+          <span>Subtotal</span>
+          <span class="num" id="pdv-subtotal">R$ 0,00</span>
+        </div>
+        <div class="summary-line" style="font-size:16px; border-bottom:0; padding-bottom:0;">
+          <strong>Total a pagar</strong>
+          <strong class="num" id="pdv-total">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="pdv-finalizar-btn" type="submit" style="width:100%; margin-top:14px;">
+        <svg class="icon"><use href="#i-check"/></svg>Finalizar venda <kbd>F9</kbd>
+      </button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

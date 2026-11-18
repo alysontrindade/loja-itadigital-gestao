@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backups/
+modelos_3d/
+relatorios_06h/
+*.db
+.secret_key
+.env

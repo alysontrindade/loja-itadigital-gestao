@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set titulo_pagina = titulo_modulo %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ titulo_modulo }}</h1>
+    <p>{{ descricao_modulo }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('main.inicio') }}">Voltar ao Início</a>
+  </div>
+</div>
+
+<section class="card">
+  <div class="empty">
+    <span class="badge badge-info">{{ etapa_prevista }}</span>
+    <h3>Módulo planejado na sequência do roadmap</h3>
+    <p style="max-width:54ch; margin:8px auto 0;">
+      A estrutura do banco SQLite para <b>{{ titulo_modulo }}</b> já está criada e protegida.
+      As telas operacionais completas serão entregues na {{ etapa_prevista }}.
+    </p>
+  </div>
+</section>
+{% endblock %}

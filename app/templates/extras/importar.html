@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Importar Produtos em Lote" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Importação de Produtos em Lote</h1>
+    <p>Cadastre dezenas de produtos de uma vez a partir de uma planilha Excel (.xlsx) ou CSV.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('extras.baixar_modelo') }}">
+      <svg class="icon"><use href="#i-download"/></svg>Baixar planilha modelo (.xlsx)
+    </a>
+    <a class="btn btn-ghost" href="{{ url_for('extras.index') }}">Voltar</a>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<section class="card card-pad" style="margin-bottom:16px;">
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('extras.importar') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="arquivo">Selecione o arquivo (.xlsx ou .csv)</label>
+      <input class="input" id="arquivo" name="arquivo" type="file" accept=".xlsx,.csv" required>
+    </div>
+    <p style="margin:0 0 14px; font-size:13px; color:var(--muted);">
+      Colunas aceitas: <code>nome</code>, <code>sku</code>, <code>codigo_barras</code>, <code>custo</code>, <code>preco</code>, <code>estoque_inicial</code>, <code>estoque_minimo</code>, <code>unidade</code>, <code>nicho</code>, <code>fornecedor</code>, <code>descricao</code>. SKUs ou códigos de barras já cadastrados são ignorados automaticamente.
+    </p>
+    <button class="btn btn-primary" type="submit">
+      <svg class="icon"><use href="#i-upload"/></svg>Importar produtos agora
+    </button>
+  </form>
+</section>
+
+{% if resumo %}
+<section class="card card-pad">
+  <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Resultado da Importação</h2>
+  <div class="summary-line">
+    <span>Total de linhas lidas</span>
+    <strong class="num">{{ resumo.total_lido }}</strong>
+  </div>
+  <div class="summary-line">
+    <span>Produtos criados</span>
+    <strong class="num" style="color:var(--success);">{{ resumo.criados }}</strong>
+  </div>
+  <div class="summary-line">
+    <span>Duplicados ignorados (SKU ou barras já existentes)</span>
+    <strong class="num">{{ resumo.duplicados }}</strong>
+  </div>
+  <div class="summary-line" style="border-bottom:0;">
+    <span>Erros encontrados</span>
+    <strong class="num" style="color:{{ 'var(--danger)' if resumo.erros else 'var(--muted)' }};">{{ resumo.erros|length }}</strong>
+  </div>
+
+  {% if resumo.erros %}
+    <ul style="margin:12px 0 0; padding-left:18px; color:var(--danger); font-size:13px;">
+      {% for e in resumo.erros %}
+        <li>{{ e }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

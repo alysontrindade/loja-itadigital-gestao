@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Relatórios & Exportação" %}
+{% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>Relatórios Gerenciais</h1>
+    <p>Faturamento, lucro real, Curva ABC, desempenho por nicho, giro de estoque, clientes e exportação Excel/CSV.</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" type="button" onclick="window.print()">Imprimir / PDF</button>
+    <a class="btn btn-primary" href="{{ url_for('relatorios.exportar_xlsx') }}">
+      <svg class="icon"><use href="#i-download"/></svg>Exportar Excel (.xlsx)
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card no-print">
+  <form method="get" action="{{ url_for('relatorios.index') }}">
+    <div class="filters">
+      <input class="input" type="date" name="data_inicio" value="{{ filtros.data_inicio }}" aria-label="Data inicial" style="max-width:160px;">
+      <input class="input" type="date" name="data_fim" value="{{ filtros.data_fim }}" aria-label="Data final" style="max-width:160px;">
+
+      <select name="canal" aria-label="Canal de venda">
+        <option value="">Todos os canais</option>
+        {% for chave, label in canais.items() %}
+          <option value="{{ chave }}" {% if filtros.canal == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="forma_pagamento" aria-label="Forma de pagamento">
+        <option value="">Todas as formas</option>
+        {% for chave, label in formas.items() %}
+          <option value="{{ chave }}" {% if filtros.forma_pagamento == chave %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="nicho_id" aria-label="Filtrar nicho">
+        <option value="">Todos os nichos</option>
+        {% for n in nichos %}
+          <option value="{{ n.id }}" {% if filtros.nicho_id == n.id|string %}selected{% endif %}>{{ n.nome }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="mes_aniversario" aria-label="Mês de aniversário dos clientes">
+        {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if rel.mes_aniversario == m|string %}selected{% endif %}>Anivers.: Mês {{ "%02d"|format(m) }}</option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-secondary" type="submit">Aplicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('relatorios.index', limpar=1) }}">Limpar</a>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:12.5px; color:var(--muted);">
+      <span>Exportar CSV rápido:</span>
+      <a class="btn btn-ghost btn-xs" href="{{ url_for('relatorios.exportar_csv', secao='vendas') }}">Vendas (.csv)</a>
+      <a class="btn btn-ghost btn-xs" href="{{ url_for('relatorios.exportar_csv', secao='abc') }}">Curva ABC (.csv)</a>
+      <a class="btn btn-ghost btn-xs" href="{{ url_for('relatorios.exportar_csv', secao='nichos') }}">Nichos (.csv)</a>
+      <a class="btn btn-ghost btn-xs" href="{{ url_for('relatorios.exportar_csv', secao='estoque') }}">Estoque (.csv)</a>
+    </div>
+  </form>
+</section>
+
+<section class="metrics" aria-label="Indicadores do período">
+  <div class="card card-pad">
+    <div class="metric-label">Faturamento ({{ rel.resumo.qtd_vendas }} venda(s))</div>
+    <div class="metric-value num">{{ rel.resumo.faturamento_centavos|brl }}</div>
+    <div class="metric-foot">
+      Descontos: <span class="num">{{ rel.resumo.descontos_centavos|brl }}</span>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Lucro bruto real</div>
+    <div class="metric-value num" style="color:var(--success);">{{ rel.resumo.lucro_centavos|brl }}</div>
+    <div class="metric-foot">
+      Margem média: <strong class="num">{{ "%.1f"|format(rel.resumo.margem_pct)|replace(".", ",") }}%</strong>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Ticket médio</div>
+    <div class="metric-value num">{{ rel.resumo.ticket_medio_centavos|brl }}</div>
+    <div class="metric-foot">Canceladas no período: {{ rel.resumo.qtd_canceladas }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Custo dos itens (CMV)</div>
+    <div class="metric-value num">{{ rel.resumo.custo_centavos|brl }}</div>
+    <div class="metric-foot">Fretes cobrados: <span class="num">{{ rel.resumo.fretes_centavos|brl }}</span></div>
+  </div>
+</section>
+
+<div class="form-grid" style="margin-bottom:16px;">
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Vendas por Canal &amp; Pagamento</h2>
+    {% if rel.por_canal %}
+    <div class="table-wrap" style="margin-bottom:14px;">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Canal</th>
+            <th class="num">Qtd</th>
+            <th class="num">Faturamento</th>
+            <th class="num">Lucro</th>
+            <th class="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in rel.por_canal %}
+          <tr>
+            <td><strong>{{ c.canal_label }}</strong></td>
+            <td class="num">{{ c.qtd }}</td>
+            <td class="num">{{ c.faturamento_centavos|brl }}</td>
+            <td class="num">{{ c.lucro_centavos|brl }}</td>
+            <td class="num">{{ "%.1f"|format(c.pct)|replace(".", ",") }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if rel.por_pagamento %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Forma de Pagamento</th>
+            <th class="num">Qtd</th>
+            <th class="num">Faturamento</th>
+            <th class="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in rel.por_pagamento %}
+          <tr>
+            <td><strong>{{ p.forma_label }}</strong></td>
+            <td class="num">{{ p.qtd }}</td>
+            <td class="num">{{ p.faturamento_centavos|brl }}</td>
+            <td class="num">{{ "%.1f"|format(p.pct)|replace(".", ",") }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Sem vendas concluídas no filtro selecionado.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Evolução Diária</h2>
+    {% if rel.por_dia %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Dia</th>
+            <th class="num">Vendas</th>
+            <th class="num">Faturamento</th>
+            <th class="num">Lucro</th>
+            <th style="width:120px;">Volume</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in rel.por_dia %}
+          <tr>
+            <td class="num">{{ d.data }}</td>
+            <td class="num">{{ d.qtd }}</td>
+            <td class="num"><strong>{{ d.faturamento_centavos|brl }}</strong></td>
+            <td class="num">{{ d.lucro_centavos|brl }}</td>
+            <td>
+              <div style="height:8px; border-radius:99px; background:var(--surface); overflow:hidden;">
+                <div style="height:100%; width:{{ d.largura_pct }}%; background:var(--accent);"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Nenhuma movimentação diária no período.</p>
+    {% endif %}
+  </section>
+</div>
+
+<div class="form-grid" style="margin-bottom:16px;">
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Curva ABC (Produtos e Kits)</h2>
+    {% if rel.curva_abc %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Classe</th>
+            <th>Item</th>
+            <th class="num">Qtd</th>
+            <th class="num">Faturamento</th>
+            <th class="num">Lucro</th>
+            <th class="num">% Acum.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in rel.curva_abc %}
+          <tr>
+            <td>
+              <span class="badge {{ 'badge-ok' if item.classe == 'A' else 'badge-warn' if item.classe == 'B' else '' }}">
+                {{ item.classe }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ item.nome }}</strong>
+              <div class="prod-sku">{{ item.tipo }} · {{ item.sku }}</div>
+            </td>
+            <td class="num">{{ item.quantidade }}</td>
+            <td class="num"><strong>{{ item.faturamento_centavos|brl }}</strong></td>
+            <td class="num">{{ item.lucro_centavos|brl }}</td>
+            <td class="num">{{ "%.1f"|format(item.pct_acumulada)|replace(".", ",") }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Sem itens vendidos para gerar a Curva ABC.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Desempenho por Nicho</h2>
+    {% if rel.por_nicho %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Nicho</th>
+            <th class="num">Unid.</th>
+            <th class="num">Faturamento</th>
+            <th class="num">Lucro</th>
+            <th class="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in rel.por_nicho %}
+          <tr>
+            <td>
+              <span class="badge">
+                <span class="niche-dot" style="background:{{ n.cor }}; margin-right:4px;"></span>{{ n.nome }}
+              </span>
+            </td>
+            <td class="num">{{ n.qtd_unidades }}</td>
+            <td class="num"><strong>{{ n.faturamento_centavos|brl }}</strong></td>
+            <td class="num">{{ n.lucro_centavos|brl }}</td>
+            <td class="num">{{ "%.1f"|format(n.pct)|replace(".", ",") }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Sem faturamento por nicho no período.</p>
+    {% endif %}
+  </section>
+</div>
+
+<div class="form-grid" style="margin-bottom:16px;">
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Reposição de Estoque Crítico ({{ rel.estoque_critico|length }})</h2>
+    {% if rel.estoque_critico %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th class="num">Atual</th>
+            <th class="num">Mínimo</th>
+            <th class="num">Sugestão Compra</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in rel.estoque_critico %}
+          <tr>
+            <td>
+              <a class="prod-name prod-name-link" href="{{ url_for('produtos.editar', produto_id=e.id) }}">{{ e.nome }}</a>
+              <div class="prod-sku">{{ e.sku }}</div>
+            </td>
+            <td class="num">
+              <span class="badge {{ 'badge-danger' if e.estoque_status == 'zerado' else 'badge-warn' }}">
+                {{ e.estoque_atual }} {{ e.unidade }}
+              </span>
+            </td>
+            <td class="num">{{ e.estoque_minimo }}</td>
+            <td class="num"><strong>+{{ e.sugestao_reposicao }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Nenhum item com estoque crítico ou zerado.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Estoque Parado / Sem Giro ({{ rel.estoque_parado|length }})</h2>
+    {% if rel.estoque_parado %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th class="num">Saldo</th>
+            <th class="num">Capital Parado (Custo)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in rel.estoque_parado %}
+          <tr>
+            <td>
+              <a class="prod-name prod-name-link" href="{{ url_for('produtos.editar', produto_id=p.id) }}">{{ p.nome }}</a>
+              <div class="prod-sku">{{ p.sku }}</div>
+            </td>
+            <td class="num">{{ p.estoque_atual }} {{ p.unidade }}</td>
+            <td class="num">{{ p.valor_custo_total_centavos|brl }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Todos os produtos em estoque tiveram saída no período.</p>
+    {% endif %}
+  </section>
+</div>
+
+<div class="form-grid">
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Compras Recebidas por Fornecedor</h2>
+    {% if rel.compras_fornecedores %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Fornecedor</th>
+            <th class="num">Pedidos</th>
+            <th class="num">Frete/Impostos</th>
+            <th class="num">Total Comprado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cf in rel.compras_fornecedores %}
+          <tr>
+            <td><strong>{{ cf.fornecedor_nome }}</strong></td>
+            <td class="num">{{ cf.qtd_pedidos }}</td>
+            <td class="num">{{ cf.extras_centavos|brl }}</td>
+            <td class="num"><strong>{{ cf.total_centavos|brl }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0; color:var(--muted); font-size:13.5px;">Nenhuma compra recebida no período.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Aniversariantes do Mês {{ "%02d"|format(rel.mes_aniversario|int) }} &amp; Top Clientes</h2>
+    {% if rel.aniversariantes %}
+    <div class="table-wrap" style="margin-bottom:14px;">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Aniversariante</th>
+            <th class="num">Data</th>
+            <th class="num">WhatsApp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in rel.aniversariantes %}
+          <tr>
+            <td><strong>{{ a.nome }}</strong></td>
+            <td class="num">{{ a.aniversario }}</td>
+            <td class="num">
+              {% if a.whatsapp_link %}
+                <a class="btn btn-secondary btn-xs" href="{{ a.whatsapp_link }}" target="_blank" rel="noopener">Enviar parabéns</a>
+              {% else %}
+                <span style="color:var(--muted);">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="margin:0 0 12px; color:var(--muted); font-size:13.5px;">Nenhum aniversariante cadastrado neste mês.</p>
+    {% endif %}
+
+    {% if rel.top_clientes %}
+    <div class="table-wrap">
+      <table class="table-static">
+        <thead>
+          <tr>
+            <th>Cliente (Top compras)</th>
+            <th class="num">Pedidos</th>
+            <th class="num">Total Gasto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tc in rel.top_clientes %}
+          <tr>
+            <td><strong>{{ tc.nome }}</strong></td>
+            <td class="num">{{ tc.qtd_compras }}</td>
+            <td class="num"><strong>{{ tc.total_centavos|brl }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

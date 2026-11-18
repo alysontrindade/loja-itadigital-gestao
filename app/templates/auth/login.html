@@ -1,0 +1,34 @@
+{% extends "auth/base_auth.html" %}
+{% block title %}Entrar — {{ cfg.nome_loja }}{% endblock %}
+{% block content %}
+<div class="auth-head">
+  <div class="brand-mark">LI</div>
+  <div>
+    <h1>{{ cfg.nome_loja }}</h1>
+    <p>Acesso local protegido (127.0.0.1)</p>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('auth.login') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="field">
+    <label for="login">Usuário</label>
+    <input class="input" id="login" name="login" type="text"
+           value="{{ request.form.get('login', 'admin') }}" required autofocus>
+  </div>
+
+  <div class="field">
+    <label for="senha">Senha</label>
+    <input class="input" id="senha" name="senha" type="password" required>
+  </div>
+
+  <button class="btn btn-primary btn-lg btn-block" type="submit">
+    Entrar no sistema
+  </button>
+</form>
+{% endblock %}

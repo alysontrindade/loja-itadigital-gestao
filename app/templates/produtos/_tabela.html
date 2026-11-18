@@ -1,0 +1,96 @@
+<div class="filter-summary">
+  <span>{{ itens|length }} produto(s) exibido(s)</span>
+  {% if filtros.busca or filtros.nicho_id or filtros.fornecedor_id or filtros.preco_min or filtros.preco_max or filtros.margem_min or filtros.margem_max or filtros.margem_abaixo_alvo == '1' or filtros.estoque_status or filtros.ativo != '1' %}
+    · <a href="{{ url_for('produtos.listar', limpar=1) }}">Limpar filtros salvos</a>
+  {% endif %}
+</div>
+
+<section class="card">
+  {% if itens %}
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Nichos</th>
+          <th>Fornecedor</th>
+          <th class="num">Custo</th>
+          <th class="num">Venda</th>
+          <th class="num">Margem</th>
+          <th class="num">Estoque</th>
+          <th class="num">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in itens %}
+        <tr>
+          <td>
+            <div class="prod-cell">
+              <div class="thumb">
+                {% if p.imagem_principal %}
+                  <img src="{{ url_for('main.foto_thumb', arquivo=p.imagem_principal) }}" alt="{{ p.nome }}" loading="lazy">
+                {% else %}
+                  {{ p.nome[:2]|upper }}
+                {% endif %}
+              </div>
+              <div>
+                <a class="prod-name prod-name-link" href="{{ url_for('produtos.editar', produto_id=p.id) }}">{{ p.nome }}</a>
+                {% if not p.ativo %}<span class="badge" style="margin-left:6px;">Inativo</span>{% endif %}
+                <div class="prod-sku">
+                  {{ p.sku }}{% if p.codigo_barras %} · {{ p.codigo_barras }}{% endif %}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if p.nichos %}
+              <div class="niche-tags">
+                {% for n in p.nichos %}
+                  <span class="badge">
+                    <span class="niche-dot" style="background:{{ n.cor }}; margin-right:3px;"></span>{{ n.nome }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span style="color:var(--muted);">—</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--muted);">{{ p.fornecedor_nome }}</td>
+          <td class="num">{{ p.custo_centavos|brl }}</td>
+          <td class="num"><strong>{{ p.preco_centavos|brl }}</strong></td>
+          <td class="num">
+            <span class="badge {{ 'badge-warn' if p.margem_baixa else 'badge-ok' }}">
+              {{ "%.1f"|format(p.margem_pct)|replace(".", ",") }}%
+            </span>
+          </td>
+          <td class="num">
+            {% if p.estoque_status == 'zerado' %}
+              <span class="badge badge-danger">{{ p.estoque_atual }} {{ p.unidade }} (Zero)</span>
+            {% elif p.estoque_status == 'baixo' %}
+              <span class="badge badge-warn">{{ p.estoque_atual }} / {{ p.estoque_minimo }} {{ p.unidade }}</span>
+            {% else %}
+              <span class="badge badge-ok">{{ p.estoque_atual }} {{ p.unidade }}</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            <div class="actions-inline">
+              <a class="btn btn-secondary btn-xs" href="{{ url_for('produtos.editar', produto_id=p.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('produtos.alternar', produto_id=p.id) }}"
+                    onsubmit="return confirm('Confirmar alteração de status deste produto?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost btn-xs" type="submit">{{ 'Inativar' if p.ativo else 'Reativar' }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Nenhum produto encontrado</h3>
+    <p>Ajuste os filtros acima ou clique em <b>+ Novo produto</b> para cadastrar.</p>
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Produtos" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Catálogo de Produtos</h1>
+    <p>Pesquise por nome, SKU ou código de barras e combine filtros de nicho, fornecedor, preço, margem e estoque.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('produtos.novo') }}">
+      <svg class="icon"><use href="#i-plus"/></svg>Novo produto
+    </a>
+  </div>
+</div>
+
+<section class="card filter-card">
+  <form method="get" action="{{ url_for('produtos.listar') }}"
+        hx-get="{{ url_for('produtos.listar') }}"
+        hx-target="#produtos-tabela"
+        hx-trigger="submit, change delay:150ms"
+        hx-push-url="true">
+
+    <div class="filters">
+      <div class="search">
+        <svg class="icon" style="color:var(--muted)"><use href="#i-search"/></svg>
+        <input type="search" name="busca" value="{{ filtros.busca }}"
+               placeholder="Buscar por nome, SKU ou código de barras...">
+      </div>
+
+      <select name="nicho_id" aria-label="Filtrar por nicho">
+        <option value="">Todos os nichos</option>
+        {% for n in nichos %}
+          <option value="{{ n.id }}" {% if filtros.nicho_id == n.id|string %}selected{% endif %}>{{ n.nome }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="fornecedor_id" aria-label="Filtrar por fornecedor">
+        <option value="">Todos os fornecedores</option>
+        {% for f in fornecedores %}
+          <option value="{{ f.id }}" {% if filtros.fornecedor_id == f.id|string %}selected{% endif %}>{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="estoque_status" aria-label="Filtrar por estoque">
+        <option value="">Todo estoque</option>
+        <option value="ok" {% if filtros.estoque_status == 'ok' %}selected{% endif %}>Estoque OK</option>
+        <option value="baixo" {% if filtros.estoque_status == 'baixo' %}selected{% endif %}>Estoque baixo</option>
+        <option value="zerado" {% if filtros.estoque_status == 'zerado' %}selected{% endif %}>Zerado</option>
+      </select>
+
+      <select name="ativo" aria-label="Filtrar por status">
+        <option value="1" {% if filtros.ativo == '1' %}selected{% endif %}>Ativos</option>
+        <option value="0" {% if filtros.ativo == '0' %}selected{% endif %}>Inativos</option>
+        <option value="todos" {% if filtros.ativo == 'todos' %}selected{% endif %}>Todos</option>
+      </select>
+    </div>
+
+    <div class="filters" style="margin-bottom:0;">
+      <input class="input" style="max-width:130px;" type="text" name="preco_min" value="{{ filtros.preco_min }}" placeholder="Preço mín. R$" aria-label="Preço mínimo">
+      <input class="input" style="max-width:130px;" type="text" name="preco_max" value="{{ filtros.preco_max }}" placeholder="Preço máx. R$" aria-label="Preço máximo">
+      <input class="input" style="max-width:135px;" type="text" name="margem_min" value="{{ filtros.margem_min }}" placeholder="Margem mín. %" aria-label="Margem mínima">
+      <input class="input" style="max-width:135px;" type="text" name="margem_max" value="{{ filtros.margem_max }}" placeholder="Margem máx. %" aria-label="Margem máxima">
+
+      <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); cursor:pointer;">
+        <input type="checkbox" name="margem_abaixo_alvo" value="1" {% if filtros.margem_abaixo_alvo == '1' %}checked{% endif %}>
+        Abaixo da meta ({{ "%.0f"|format(margem_alvo) }}%)
+      </label>
+
+      <select name="ordenar" aria-label="Ordenação">
+        <option value="nome" {% if filtros.ordenar == 'nome' %}selected{% endif %}>Ordenar: Nome A–Z</option>
+        <option value="preco_asc" {% if filtros.ordenar == 'preco_asc' %}selected{% endif %}>Menor preço</option>
+        <option value="preco_desc" {% if filtros.ordenar == 'preco_desc' %}selected{% endif %}>Maior preço</option>
+        <option value="estoque_asc" {% if filtros.ordenar == 'estoque_asc' %}selected{% endif %}>Menor estoque</option>
+        <option value="recentes" {% if filtros.ordenar == 'recentes' %}selected{% endif %}>Mais recentes</option>
+      </select>
+
+      <button class="btn btn-secondary" type="submit">Aplicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('produtos.listar', limpar=1) }}">Limpar filtros</a>
+    </div>
+  </form>
+</section>
+
+<div id="produtos-tabela">
+  {% include "produtos/_tabela.html" %}
+</div>
+{% endblock %}

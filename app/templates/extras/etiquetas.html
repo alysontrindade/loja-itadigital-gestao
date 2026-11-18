@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Etiquetas de Preço" %}
+{% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>Etiquetas de Preço &amp; Código de Barras</h1>
+    <p>Escolha o produto e a quantidade de etiquetas para imprimir em papel A4 ou adesivo.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('extras.index') }}">Voltar</a>
+    {% if etiquetas %}
+      <button class="btn btn-primary" type="button" onclick="window.print()">Imprimir etiquetas</button>
+    {% endif %}
+  </div>
+</div>
+
+<section class="card card-pad no-print" style="margin-bottom:16px;">
+  <form method="post" action="{{ url_for('extras.etiquetas') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row-3" style="align-items:end;">
+      <div class="field" style="grid-column:span 2; margin-bottom:0;">
+        <label for="etq-produto">Produto</label>
+        <select class="input" id="etq-produto" name="produto_id" required>
+          <option value="">Selecione um produto...</option>
+          {% for p in produtos %}
+            <option value="{{ p.id }}">{{ p.nome }} ({{ p.sku }} · {{ p.preco_centavos|brl }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label for="etq-qtd">Quantidade de cópias</label>
+        <div style="display:flex; gap:8px;">
+          <input class="input num" id="etq-qtd" name="qtd" type="number" min="1" max="60" value="4" required>
+          <button class="btn btn-primary" type="submit">Gerar</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+{% if etiquetas %}
+<section class="labels-grid">
+  {% for etq in etiquetas %}
+  <article class="label-card">
+    <div class="label-store">{{ cfg.nome_loja }}</div>
+    <div class="label-name">{{ etq.produto.nome }}</div>
+    <div class="label-price num">{{ etq.produto.preco_centavos|brl }}</div>
+    <div class="label-barcode">{{ etq.svg|safe }}</div>
+    <div class="label-sku num">{{ etq.produto.codigo_barras or etq.produto.sku }} · {{ etq.produto.sku }}</div>
+  </article>
+  {% endfor %}
+</section>
+{% else %}
+<section class="card">
+  <div class="empty">
+    <h3>Nenhuma etiqueta gerada</h3>
+    <p>Selecione um produto acima e informe quantas cópias deseja imprimir.</p>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

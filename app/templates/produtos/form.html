@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Editar produto" if produto else "Novo produto" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ titulo_pagina }}</h1>
+    <p>Preencha identificação, preços com cálculo automático de margem, nichos, fornecedor e fotos locais.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('produtos.listar') }}">Voltar à lista</a>
+  </div>
+</div>
+
+{% if erro %}
+  <div class="alert alert-danger" role="alert">{{ erro }}</div>
+{% endif %}
+
+<form method="post"
+      enctype="multipart/form-data"
+      action="{{ url_for('produtos.editar', produto_id=produto.id) if produto else url_for('produtos.novo') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="form-grid">
+    <div>
+      <section class="card card-pad" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 14px; font-size:16px; color:var(--fg-2);">Identificação</h2>
+
+        <div class="field">
+          <label for="nome">Nome do produto</label>
+          <input class="input" id="nome" name="nome" type="text" value="{{ dados.nome }}" required autofocus
+                 hx-get="{{ url_for('produtos.verificar_duplicidade', excluir_id=produto.id if produto else '') }}"
+                 hx-trigger="input changed delay:400ms"
+                 hx-include="#sku, #codigo_barras"
+                 hx-target="#duplicidade-aviso">
+        </div>
+
+        <div class="row-3">
+          <div class="field">
+            <label for="sku">SKU interno</label>
+            <input class="input" id="sku" name="sku" type="text" value="{{ dados.sku }}" required
+                   hx-get="{{ url_for('produtos.verificar_duplicidade', excluir_id=produto.id if produto else '') }}"
+                   hx-trigger="input changed delay:400ms"
+                   hx-include="#nome, #codigo_barras"
+                   hx-target="#duplicidade-aviso">
+          </div>
+          <div class="field">
+            <label for="codigo_barras">
+              <span>Código de barras</span>
+              <svg class="icon" style="width:15px;height:15px;color:var(--meta);"><use href="#i-barcode"/></svg>
+            </label>
+            <input class="input" id="codigo_barras" name="codigo_barras" type="text" value="{{ dados.codigo_barras }}"
+                   placeholder="EAN / leitor USB"
+                   hx-get="{{ url_for('produtos.verificar_duplicidade', excluir_id=produto.id if produto else '') }}"
+                   hx-trigger="input changed delay:400ms"
+                   hx-include="#nome, #sku"
+                   hx-target="#duplicidade-aviso">
+          </div>
+          <div class="field">
+            <label for="unidade">Unidade</label>
+            <input class="input" id="unidade" name="unidade" type="text" value="{{ dados.unidade }}" placeholder="un, kit, cx">
+          </div>
+        </div>
+
+        <div id="duplicidade-aviso"></div>
+
+        <div class="field" style="margin-top:8px; margin-bottom:0;">
+          <label for="descricao">Descrição / detalhes</label>
+          <textarea class="input" id="descricao" name="descricao" rows="3" placeholder="Tamanho, material, variação de cor...">{{ dados.descricao }}</textarea>
+        </div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="field">
+          <label for="filtro-nichos-form">
+            <span>Nichos do produto</span>
+            <input class="input mini-filter" id="filtro-nichos-form" type="search" placeholder="Filtrar nichos...">
+          </label>
+          <div class="check-list">
+            {% for n in nichos %}
+            <label class="chip-toggle" data-nicho-label="{{ n.nome }}">
+              <input type="checkbox" name="nichos" value="{{ n.id }}" {% if n.id in nichos_selecionados %}checked{% endif %}>
+              <span class="chip">
+                <span class="niche-dot" style="background:{{ n.cor }}; margin-right:2px;"></span>{{ n.nome }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:0;">
+          <label for="fornecedor_id">
+            <span>Fornecedor principal</span>
+            <input class="input mini-filter" id="filtro-forn-form" type="search" placeholder="Filtrar fornecedor...">
+          </label>
+          <select class="input" id="fornecedor_id" name="fornecedor_id">
+            <option value="">Sem fornecedor vinculado</option>
+            {% for f in fornecedores %}
+              <option value="{{ f.id }}" {% if dados.fornecedor_id == f.id|string %}selected{% endif %}>
+                {{ f.nome }} ({{ f.tipo_label }}{% if f.cidade_uf %} — {{ f.cidade_uf }}{% endif %})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card card-pad" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 14px; font-size:16px; color:var(--fg-2);">Preços e Margem</h2>
+
+        <div class="row-2">
+          <div class="field">
+            <label for="custo">Custo unitário</label>
+            <div class="money">
+              <span>R$</span>
+              <input class="input num" id="custo" name="custo" type="text" value="{{ dados.custo }}" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="preco">Preço de venda</label>
+            <div class="money">
+              <span>R$</span>
+              <input class="input num" id="preco" name="preco" type="text" value="{{ dados.preco }}" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="margin-live" id="margin-live-box" data-margem-alvo="{{ margem_alvo }}">
+          <div>
+            <div class="metric-label">Lucro bruto</div>
+            <div class="metric-value num" id="lucro-vivo">{{ margem.lucro_centavos|brl }}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="metric-label">Margem</div>
+            <div class="metric-value num" id="margem-viva">{{ "%.1f"|format(margem.margem_pct)|replace(".", ",") }}%</div>
+            <span class="badge" id="margem-status-badge">Meta: {{ "%.0f"|format(margem_alvo) }}%</span>
+          </div>
+        </div>
+
+        <div class="row-2">
+          {% if produto %}
+          <div class="field">
+            <label>Estoque atual</label>
+            <input class="input num" type="text" value="{{ produto.estoque_atual }} {{ produto.unidade }}" disabled>
+            <span class="hint">Alterado via Compras, Vendas ou Ajustes.</span>
+          </div>
+          {% else %}
+          <div class="field">
+            <label for="estoque_inicial">Saldo inicial</label>
+            <input class="input num" id="estoque_inicial" name="estoque_inicial" type="number" min="0" value="{{ dados.estoque_inicial }}">
+            <span class="hint">Registra entrada automática inicial.</span>
+          </div>
+          {% endif %}
+
+          <div class="field">
+            <label for="estoque_minimo">Estoque mínimo (alerta)</label>
+            <input class="input num" id="estoque_minimo" name="estoque_minimo" type="number" min="0" value="{{ dados.estoque_minimo }}">
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-pad" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Adicionar Fotos</h2>
+        <label class="dropzone" for="imagens">
+          <svg class="icon" style="width:22px;height:22px; margin-bottom:4px;"><use href="#i-upload"/></svg>
+          <div><strong>Clique para escolher imagens</strong> do computador</div>
+          <div class="hint" id="imagens-selecionadas" style="margin-top:4px;">Formatos aceitos: JPG, PNG ou WEBP (até 10 MB cada).</div>
+          <input id="imagens" name="imagens" type="file" accept="image/jpeg,image/png,image/webp" multiple style="display:none;">
+        </label>
+
+        <div class="form-foot" style="margin-top:16px;">
+          <a class="btn btn-secondary" href="{{ url_for('produtos.listar') }}">Cancelar</a>
+          <button class="btn btn-primary" type="submit">Salvar produto</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</form>
+
+{% if produto and imagens %}
+<section class="card card-pad" style="margin-top:16px;">
+  <h2 style="margin:0 0 4px; font-size:16px; color:var(--fg-2);">Fotos Salvas do Produto</h2>
+  <p style="margin:0 0 10px; font-size:13px; color:var(--muted);">A foto principal aparece como miniatura no catálogo e no caixa.</p>
+
+  <div class="photo-gallery">
+    {% for img in imagens %}
+    <div class="photo-card">
+      <a href="{{ url_for('main.foto_produto', arquivo=img.arquivo) }}" target="_blank" rel="noopener noreferrer">
+        <img src="{{ url_for('main.foto_thumb', arquivo=img.arquivo) }}" alt="{{ produto.nome }}">
+      </a>
+      <div class="photo-card-actions">
+        {% if img.principal %}
+          <span class="badge badge-ok" style="justify-content:center;">Foto principal</span>
+        {% else %}
+          <form method="post" action="{{ url_for('produtos.imagem_principal', produto_id=produto.id, imagem_id=img.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-secondary btn-xs btn-block" type="submit">Tornar principal</button>
+          </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('produtos.imagem_remover', produto_id=produto.id, imagem_id=img.id) }}"
+              onsubmit="return confirm('Remover esta foto do produto?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger btn-xs btn-block" type="submit">Remover</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

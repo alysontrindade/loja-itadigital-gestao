@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Loja Itamarandiba – Modelo de Dados (SQLite)",
+    "locale": "pt-BR",
+    "output": ".archify/erd-modelo-dados-20261113-093400/modelo-dados.html",
+    "quality_profile": "standard",
+    "views": [
+      {
+        "id": "catalogo",
+        "label": "Catálogo e nichos",
+        "focus": ["produto", "nicho", "produto_nicho", "produto_imagem"],
+        "note": "Um produto pode pertencer a vários nichos (ex.: caneca em Presentes e Religioso)."
+      },
+      {
+        "id": "compras",
+        "label": "Compras e estoque",
+        "focus": ["fornecedor", "compra", "compra_item", "movimento_estoque", "produto"],
+        "note": "Cada compra recebida gera entradas de estoque com custo final (frete e impostos rateados)."
+      },
+      {
+        "id": "vendas",
+        "label": "Vendas e kits",
+        "focus": ["cliente", "venda", "venda_item", "kit", "kit_item", "produto"],
+        "note": "venda_item guarda o custo no momento da venda para calcular a margem real."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 56,
+    "gapY": 34
+  },
+  "entities": [
+    {
+      "id": "nicho", "label": "nicho", "tag": "catálogo", "row": 0, "col": 0,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "nome", "type": "TEXT", "key": "uk" },
+        { "name": "descricao", "type": "TEXT" },
+        { "name": "cor", "type": "TEXT" },
+        { "name": "ativo", "type": "INTEGER" },
+        { "name": "criado_em", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "produto", "label": "produto", "tag": "catálogo", "row": 1, "col": 0, "width": 250,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "sku", "type": "TEXT", "key": "uk" },
+        { "name": "codigo_barras", "type": "TEXT", "key": "uk" },
+        { "name": "nome", "type": "TEXT" },
+        { "name": "descricao", "type": "TEXT" },
+        { "name": "unidade", "type": "TEXT" },
+        { "name": "custo_centavos", "type": "INTEGER" },
+        { "name": "preco_centavos", "type": "INTEGER" },
+        { "name": "estoque_atual", "type": "INTEGER" },
+        { "name": "estoque_minimo", "type": "INTEGER" },
+        { "name": "fornecedor_id", "type": "INTEGER", "key": "fk", "references": "fornecedor.id" },
+        { "name": "ativo", "type": "INTEGER" },
+        { "name": "criado_em", "type": "TEXT" },
+        { "name": "atualizado_em", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "produto_nicho", "label": "produto_nicho", "tag": "catálogo", "row": 2, "col": 0,
+      "attributes": [
+        { "name": "produto_id", "type": "INTEGER", "key": ["pk", "fk"], "references": "produto.id" },
+        { "name": "nicho_id", "type": "INTEGER", "key": ["pk", "fk"], "references": "nicho.id" }
+      ]
+    },
+    {
+      "id": "produto_imagem", "label": "produto_imagem", "tag": "catálogo", "row": 3, "col": 0,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "produto_id", "type": "INTEGER", "key": "fk", "references": "produto.id" },
+        { "name": "arquivo", "type": "TEXT" },
+        { "name": "principal", "type": "INTEGER" },
+        { "name": "ordem", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "fornecedor", "label": "fornecedor", "tag": "compras", "row": 0, "col": 1, "width": 276,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "nome", "type": "TEXT" },
+        { "name": "tipo", "type": "TEXT" },
+        { "name": "contato", "type": "TEXT" },
+        { "name": "whatsapp", "type": "TEXT" },
+        { "name": "site", "type": "TEXT" },
+        { "name": "cidade_uf", "type": "TEXT" },
+        { "name": "prazo_dias", "type": "INTEGER" },
+        { "name": "pedido_minimo_centavos", "type": "INTEGER" },
+        { "name": "observacoes", "type": "TEXT" },
+        { "name": "ativo", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "compra", "label": "compra", "tag": "compras", "row": 1, "col": 1, "width": 276,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "fornecedor_id", "type": "INTEGER", "key": "fk", "references": "fornecedor.id" },
+        { "name": "data", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "frete_centavos", "type": "INTEGER" },
+        { "name": "impostos_centavos", "type": "INTEGER" },
+        { "name": "outros_custos_centavos", "type": "INTEGER" },
+        { "name": "total_centavos", "type": "INTEGER" },
+        { "name": "observacoes", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "compra_item", "label": "compra_item", "tag": "compras", "row": 2, "col": 1, "width": 276,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "compra_id", "type": "INTEGER", "key": "fk", "references": "compra.id" },
+        { "name": "produto_id", "type": "INTEGER", "key": "fk", "references": "produto.id" },
+        { "name": "quantidade", "type": "INTEGER" },
+        { "name": "custo_unit_centavos", "type": "INTEGER" },
+        { "name": "custo_final_unit_centavos", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "movimento_estoque", "label": "movimento_estoque", "tag": "estoque", "row": 3, "col": 1, "width": 276,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "produto_id", "type": "INTEGER", "key": "fk", "references": "produto.id" },
+        { "name": "tipo", "type": "TEXT" },
+        { "name": "quantidade", "type": "INTEGER" },
+        { "name": "origem", "type": "TEXT" },
+        { "name": "referencia_id", "type": "INTEGER" },
+        { "name": "motivo", "type": "TEXT" },
+        { "name": "criado_em", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "cliente", "label": "cliente", "tag": "vendas", "row": 0, "col": 2,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "nome", "type": "TEXT" },
+        { "name": "whatsapp", "type": "TEXT", "key": "uk" },
+        { "name": "email", "type": "TEXT" },
+        { "name": "cidade", "type": "TEXT" },
+        { "name": "aniversario", "type": "TEXT" },
+        { "name": "observacoes", "type": "TEXT" },
+        { "name": "criado_em", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "venda", "label": "venda", "tag": "vendas", "row": 1, "col": 2, "width": 236,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "cliente_id", "type": "INTEGER", "key": "fk", "references": "cliente.id" },
+        { "name": "data", "type": "TEXT" },
+        { "name": "canal", "type": "TEXT" },
+        { "name": "forma_pagamento", "type": "TEXT" },
+        { "name": "status", "type": "TEXT" },
+        { "name": "subtotal_centavos", "type": "INTEGER" },
+        { "name": "desconto_centavos", "type": "INTEGER" },
+        { "name": "frete_centavos", "type": "INTEGER" },
+        { "name": "total_centavos", "type": "INTEGER" },
+        { "name": "observacoes", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "venda_item", "label": "venda_item", "tag": "vendas", "row": 2, "col": 2, "width": 236,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "venda_id", "type": "INTEGER", "key": "fk", "references": "venda.id" },
+        { "name": "produto_id", "type": "INTEGER", "key": "fk", "references": "produto.id" },
+        { "name": "kit_id", "type": "INTEGER", "key": "fk", "references": "kit.id" },
+        { "name": "quantidade", "type": "INTEGER" },
+        { "name": "preco_unit_centavos", "type": "INTEGER" },
+        { "name": "custo_unit_centavos", "type": "INTEGER" },
+        { "name": "desconto_centavos", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "kit", "label": "kit", "tag": "kits", "row": 0, "col": 3,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "nome", "type": "TEXT" },
+        { "name": "nivel", "type": "TEXT" },
+        { "name": "nicho_id", "type": "INTEGER", "key": "fk", "references": "nicho.id" },
+        { "name": "preco_centavos", "type": "INTEGER" },
+        { "name": "descricao", "type": "TEXT" },
+        { "name": "ativo", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "kit_item", "label": "kit_item", "tag": "kits", "row": 1, "col": 3,
+      "attributes": [
+        { "name": "kit_id", "type": "INTEGER", "key": ["pk", "fk"], "references": "kit.id" },
+        { "name": "produto_id", "type": "INTEGER", "key": ["pk", "fk"], "references": "produto.id" },
+        { "name": "quantidade", "type": "INTEGER" }
+      ]
+    },
+    {
+      "id": "usuario", "label": "usuario", "tag": "sistema", "row": 0, "col": 4,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "nome", "type": "TEXT" },
+        { "name": "login", "type": "TEXT", "key": "uk" },
+        { "name": "senha_hash", "type": "TEXT" },
+        { "name": "tentativas_falhas", "type": "INTEGER" },
+        { "name": "bloqueado_ate", "type": "TEXT" },
+        { "name": "ultimo_acesso", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "configuracao", "label": "configuracao", "tag": "sistema", "row": 1, "col": 4,
+      "attributes": [
+        { "name": "chave", "type": "TEXT", "key": "pk" },
+        { "name": "valor", "type": "TEXT" }
+      ]
+    },
+    {
+      "id": "log_auditoria", "label": "log_auditoria", "tag": "sistema", "row": 2, "col": 4,
+      "attributes": [
+        { "name": "id", "type": "INTEGER", "key": "pk" },
+        { "name": "usuario_id", "type": "INTEGER", "key": "fk", "references": "usuario.id" },
+        { "name": "acao", "type": "TEXT" },
+        { "name": "entidade", "type": "TEXT" },
+        { "name": "entidade_id", "type": "INTEGER" },
+        { "name": "detalhes", "type": "TEXT" },
+        { "name": "criado_em", "type": "TEXT" }
+      ]
+    }
+  ],
+  "relationships": [
+    { "id": "pn_produto", "from": "produto_nicho", "to": "produto", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "pn_nicho", "from": "produto_nicho", "to": "nicho", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "img_produto", "from": "produto_imagem", "to": "produto", "fromCardinality": "many", "fromOptional": true, "toCardinality": "one" },
+    { "id": "produto_fornecedor", "from": "produto", "to": "fornecedor", "label": "fornecedor principal", "fromCardinality": "many", "toCardinality": "one", "toOptional": true, "identifying": false, "variant": "dashed" },
+    { "id": "compra_fornecedor", "from": "compra", "to": "fornecedor", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "ci_compra", "from": "compra_item", "to": "compra", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "ci_produto", "from": "compra_item", "to": "produto", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "mov_produto", "from": "movimento_estoque", "to": "produto", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "venda_cliente", "from": "venda", "to": "cliente", "fromCardinality": "many", "toCardinality": "one", "toOptional": true, "identifying": false, "variant": "dashed" },
+    { "id": "vi_venda", "from": "venda_item", "to": "venda", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "vi_produto", "from": "venda_item", "to": "produto", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "vi_kit", "from": "venda_item", "to": "kit", "fromCardinality": "many", "toCardinality": "one", "toOptional": true, "identifying": false, "variant": "dashed" },
+    { "id": "kit_nicho", "from": "kit", "to": "nicho", "fromCardinality": "many", "toCardinality": "one", "toOptional": true, "identifying": false, "variant": "dashed" },
+    { "id": "ki_kit", "from": "kit_item", "to": "kit", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "ki_produto", "from": "kit_item", "to": "produto", "fromCardinality": "many", "toCardinality": "one" },
+    { "id": "log_usuario", "from": "log_auditoria", "to": "usuario", "fromCardinality": "many", "toCardinality": "one" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Dinheiro e datas",
+      "items": [
+        "Valores em centavos (INTEGER) para evitar erros de arredondamento.",
+        "Datas em texto ISO-8601 (AAAA-MM-DD HH:MM:SS), padrão do SQLite."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Estoque confiável",
+      "items": [
+        "estoque_atual é atualizado só por movimento_estoque, nunca editado direto.",
+        "Venda concluída gera saída; compra recebida gera entrada; ajuste exige motivo."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Margem real",
+      "items": [
+        "compra_item rateia frete e impostos no custo_final_unit.",
+        "venda_item congela preço e custo no momento da venda."
+      ]
+    }
+  ]
+}

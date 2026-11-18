@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Compra #" ~ info.compra.id %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Pedido de Compra #{{ info.compra.id }}</h1>
+    <p>{{ info.fornecedor_nome }} · Data {{ info.compra.data[:10] }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('compras.listar') }}">Voltar às compras</a>
+    <a class="btn btn-ghost" href="{{ url_for('compras.novo') }}">Nova compra</a>
+  </div>
+</div>
+
+<section class="metrics" style="grid-template-columns:repeat(4, minmax(0, 1fr));">
+  <div class="card card-pad">
+    <div class="metric-label">Status</div>
+    <div style="margin-top:6px;">
+      {% if info.compra.status == 'recebida' %}
+        <span class="badge badge-ok">{{ info.status_label }}</span>
+      {% elif info.compra.status == 'aberta' %}
+        <span class="badge badge-warn">{{ info.status_label }}</span>
+      {% else %}
+        <span class="badge badge-danger">{{ info.status_label }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Frete</div>
+    <div class="metric-value num" style="font-size:20px;">{{ info.compra.frete_centavos|brl }}</div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Impostos + Outros</div>
+    <div class="metric-value num" style="font-size:20px;">
+      {{ (info.compra.impostos_centavos + info.compra.outros_custos_centavos)|brl }}
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="metric-label">Total da Nota</div>
+    <div class="metric-value num" style="font-size:20px;">{{ info.compra.total_centavos|brl }}</div>
+  </div>
+</section>
+
+{% if info.compra.status == 'aberta' %}
+<section class="card card-pad" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+  <div>
+    <strong style="color:var(--fg-2);">Pedido aguardando conferência e entrada</strong>
+    <div style="font-size:13px; color:var(--muted);">
+      Ao confirmar o recebimento, todos os itens entram no estoque com auditoria automática e proteção contra duplicidade.
+    </div>
+  </div>
+  <div class="actions">
+    <form method="post" action="{{ url_for('compras.receber', compra_id=info.compra.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="atualizar_custo_produto" value="1">
+      <button class="btn btn-primary" type="submit">
+        <svg class="icon"><use href="#i-check"/></svg>Receber e lançar no estoque
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('compras.cancelar', compra_id=info.compra.id) }}"
+          onsubmit="return confirm('Cancelar este pedido antes do recebimento?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-danger" type="submit">Cancelar pedido</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="table-static">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th class="num">Qtd</th>
+          <th class="num">Custo Base Unit.</th>
+          <th class="num">Custo Real c/ Rateio</th>
+          <th class="num">Subtotal Final</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in info.itens %}
+        <tr>
+          <td>
+            <a class="prod-name prod-name-link" href="{{ url_for('produtos.editar', produto_id=item.produto_id) }}">{{ item.produto_nome }}</a>
+            <div class="prod-sku">{{ item.sku }}</div>
+          </td>
+          <td class="num">{{ item.quantidade }}</td>
+          <td class="num">{{ item.custo_unit_centavos|brl }}</td>
+          <td class="num"><strong>{{ item.custo_final_unit_centavos|brl }}</strong></td>
+          <td class="num"><strong>{{ item.subtotal_final_centavos|brl }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if info.compra.observacoes %}
+<section class="card card-pad" style="margin-top:16px;">
+  <h2 style="margin:0 0 6px; font-size:15px; color:var(--fg-2);">Observações</h2>
+  <p style="margin:0; font-size:13.5px; color:var(--muted);">{{ info.compra.observacoes }}</p>
+</section>
+{% endif %}
+{% endblock %}

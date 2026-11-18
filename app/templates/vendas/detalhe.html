@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Venda #" ~ info.venda.id %}
+{% block content %}
+<div class="page-head no-print">
+  <div>
+    <h1>Comprovante da Venda #{{ info.venda.id }}</h1>
+    <p>{{ info.canal_label }} · {{ info.forma_label }} · {{ info.venda.data[:19]|replace("T", " ") }}</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" type="button" onclick="window.print()">Imprimir comprovante</button>
+    <a class="btn btn-secondary" href="{{ url_for('vendas.listar') }}">Todas as vendas</a>
+    <a class="btn btn-primary" href="{{ url_for('vendas.pdv') }}">Nova venda (F2)</a>
+  </div>
+</div>
+
+<div class="form-grid">
+  <div>
+    <section class="card card-pad receipt-card">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; border-bottom:1px dashed var(--border); padding-bottom:12px; margin-bottom:14px;">
+        <div>
+          <strong style="font-size:17px; color:var(--fg-2);">{{ cfg.nome_loja }}</strong>
+          <div style="font-size:13px; color:var(--muted);">
+            Comprovante não fiscal · Pedido #{{ info.venda.id }} · {{ info.venda.data[:16]|replace("T", " ") }}
+          </div>
+          <div style="font-size:13px; color:var(--fg); margin-top:4px;">
+            Cliente: <strong>{{ info.cliente_nome }}</strong>
+          </div>
+        </div>
+        <span class="badge {{ 'badge-ok' if info.venda.status == 'concluida' else 'badge-danger' }}">
+          {{ info.status_label }}
+        </span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table-static">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="num">Qtd</th>
+              <th class="num">Unit.</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in info.itens %}
+            <tr>
+              <td>
+                <strong>{{ item.nome }}</strong>
+                <div class="prod-sku">{{ item.tipo }} · {{ item.sku }}</div>
+              </td>
+              <td class="num">{{ item.quantidade }}</td>
+              <td class="num">{{ item.preco_unit_centavos|brl }}</td>
+              <td class="num"><strong>{{ item.subtotal_centavos|brl }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px dashed var(--border); padding-top:12px; max-width:320px; margin-left:auto;">
+        <div class="summary-line">
+          <span>Subtotal</span>
+          <span class="num">{{ info.venda.subtotal_centavos|brl }}</span>
+        </div>
+        {% if info.venda.desconto_centavos > 0 %}
+        <div class="summary-line">
+          <span>Desconto</span>
+          <span class="num">- {{ info.venda.desconto_centavos|brl }}</span>
+        </div>
+        {% endif %}
+        {% if info.venda.frete_centavos > 0 %}
+        <div class="summary-line">
+          <span>Frete / Entrega</span>
+          <span class="num">{{ info.venda.frete_centavos|brl }}</span>
+        </div>
+        {% endif %}
+        <div class="summary-line" style="font-size:16.5px; border-bottom:0; padding-bottom:0;">
+          <strong>Total Pago ({{ info.forma_label }})</strong>
+          <strong class="num">{{ info.venda.total_centavos|brl }}</strong>
+        </div>
+      </div>
+
+      {% if info.venda.observacoes %}
+      <p style="margin:14px 0 0; font-size:13px; color:var(--muted);">
+        Observação: {{ info.venda.observacoes }}
+      </p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="no-print">
+    <section class="card card-pad" style="margin-bottom:16px;">
+      <h2 style="margin:0 0 10px; font-size:16px; color:var(--fg-2);">Margem Gerencial (Interno)</h2>
+      <div class="summary-line">
+        <span>Custo congelado na venda</span>
+        <strong class="num">{{ info.custo_total_centavos|brl }}</strong>
+      </div>
+      <div class="summary-line" style="border-bottom:0; padding-bottom:0;">
+        <span>Lucro bruto estimado</span>
+        <strong class="num" style="color:var(--success);">{{ info.lucro_estimado_centavos|brl }}</strong>
+      </div>
+    </section>
+
+    {% if info.venda.status == 'concluida' %}
+    <section class="card card-pad">
+      <h2 style="margin:0 0 6px; font-size:16px; color:var(--fg-2);">Estorno / Cancelamento</h2>
+      <p style="margin:0 0 12px; font-size:13px; color:var(--muted);">
+        Cancelar devolve automaticamente todas as quantidades vendidas (inclusive itens de kits) ao estoque.
+      </p>
+      <form method="post" action="{{ url_for('vendas.cancelar', venda_id=info.venda.id) }}"
+            onsubmit="return confirm('Confirmar cancelamento e devolução automática ao estoque?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="motivo-cancelamento">Motivo (opcional)</label>
+          <input class="input" id="motivo-cancelamento" name="motivo" type="text" placeholder="Ex.: Troca ou desistência">
+        </div>
+        <button class="btn btn-danger" type="submit" style="width:100%;">Cancelar venda e estornar estoque</button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

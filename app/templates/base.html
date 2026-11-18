@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="{{ cfg.tema }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ titulo_pagina|default('Início') }} — {{ cfg.nome_loja }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/extras.css') }}">
+</head>
+<body>
+{% include "partials/_icons.html" %}
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Menu principal">
+    <div class="brand">
+      <div class="brand-mark">LI</div>
+      <div>
+        <div class="brand-name">{{ cfg.nome_loja }}</div>
+        <div class="brand-sub">Gestão local</div>
+      </div>
+    </div>
+
+    <a class="nav-item" href="{{ url_for('main.inicio') }}"
+       {% if request.endpoint == 'main.inicio' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-home"/></svg>Início
+    </a>
+    <a class="nav-item" href="{{ url_for('vendas.pdv') }}"
+       {% if request.endpoint == 'vendas.pdv' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-cart"/></svg>PDV / Caixa <kbd style="margin-left:auto">F2</kbd>
+    </a>
+
+    <div class="nav-label">Cadastros</div>
+    <a class="nav-item" href="{{ url_for('produtos.listar') }}"
+       {% if request.blueprint == 'produtos' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-box"/></svg>Produtos
+    </a>
+    <a class="nav-item" href="{{ url_for('nichos.listar') }}"
+       {% if request.blueprint == 'nichos' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-tag"/></svg>Nichos
+    </a>
+    <a class="nav-item" href="{{ url_for('kits.listar') }}"
+       {% if request.blueprint == 'kits' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-gift"/></svg>Kits &amp; Combos
+    </a>
+    <a class="nav-item" href="{{ url_for('clientes.listar') }}"
+       {% if request.blueprint == 'clientes' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-users"/></svg>Clientes
+    </a>
+    <a class="nav-item" href="{{ url_for('fornecedores.listar') }}"
+       {% if request.blueprint == 'fornecedores' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-factory"/></svg>Fornecedores
+    </a>
+
+    <div class="nav-label">Operação</div>
+    <a class="nav-item" href="{{ url_for('vendas.listar') }}"
+       {% if request.endpoint in ('vendas.listar', 'vendas.detalhe') %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-check"/></svg>Vendas Realizadas
+    </a>
+    <a class="nav-item" href="{{ url_for('compras.listar') }}"
+       {% if request.blueprint == 'compras' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-truck"/></svg>Compras
+    </a>
+    <a class="nav-item" href="{{ url_for('estoque.listar') }}"
+       {% if request.blueprint == 'estoque' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-layers"/></svg>Estoque
+      {% if estoque_critico_count > 0 %}
+        <span class="count" title="Produtos com estoque baixo ou zerado">{{ estoque_critico_count }}</span>
+      {% endif %}
+    </a>
+    <a class="nav-item" href="{{ url_for('relatorios.index') }}"
+       {% if request.blueprint == 'relatorios' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-chart"/></svg>Relatórios
+    </a>
+    <a class="nav-item" href="{{ url_for('extras.index') }}"
+       {% if request.blueprint == 'extras' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-barcode"/></svg>Ferramentas Extras
+    </a>
+    <a class="nav-item" href="{{ url_for('ideias_3d.listar') }}"
+       {% if request.blueprint == 'ideias_3d' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-box"/></svg>Ideias 3D (Robô 06h)
+    </a>
+
+    <div class="sidebar-foot">
+      <form class="nav-form" method="post" action="{{ url_for('main.alternar_tema_rapido') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button class="nav-item" type="submit">
+          <svg class="icon"><use href="#{{ 'i-sun' if cfg.tema == 'escuro' else 'i-moon' }}"/></svg>
+          <span>Tema: {{ cfg.tema|capitalize }}</span>
+        </button>
+      </form>
+      <a class="nav-item" href="{{ url_for('main.configuracoes') }}"
+         {% if request.endpoint == 'main.configuracoes' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-gear"/></svg>Configurações
+      </a>
+      <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="nav-item" type="submit">
+          <svg class="icon"><use href="#i-x"/></svg>Sair ({{ usuario_nome or 'Admin' }})
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-ghost menu-btn" id="menu-btn" type="button" aria-label="Abrir menu" aria-expanded="false">
+        <svg class="icon"><use href="#i-menu"/></svg>
+      </button>
+      <div class="crumbs">{{ cfg.nome_loja }} / <b>{% block crumb %}{{ titulo_pagina|default('Início') }}{% endblock %}</b></div>
+      <div class="spacer"></div>
+      <span class="backup-status" title="Backup automático diário local">
+        <span class="dot"></span>
+        {% if backup_recente %}
+          Backup: {{ backup_recente.modified_at }}
+        {% else %}
+          Backup diário ativo
+        {% endif %}
+      </span>
+      <a class="btn btn-primary" href="{{ url_for('vendas.pdv') }}">
+        <svg class="icon"><use href="#i-cart"/></svg>Nova venda <kbd>F2</kbd>
+      </a>
+    </header>
+
+    <main class="page">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for categoria, msg in messages %}
+          <div class="alert alert-{{ categoria }}" role="status">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

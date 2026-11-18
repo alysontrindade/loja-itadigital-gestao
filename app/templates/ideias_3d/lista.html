@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% set titulo_pagina = "Notas & Ideias de Impressão 3D" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Notas &amp; Ideias de Impressão 3D</h1>
+    <p>Anote apenas o nome da ideia. Todo dia às 06h (ou sob demanda) o robô busca no MakerWorld, Mercado Livre e Shopee, confere o tamanho comercial e fatia o modelo.</p>
+  </div>
+  <form method="post" action="{{ url_for('ideias_3d.processar_todas_pendentes') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary">Processar Pendentes Agora</button>
+  </form>
+</div>
+
+<section class="card card-pad" style="margin-bottom:16px;">
+  <h2 style="margin:0 0 10px; font-size:16px;">Nova Ideia de Impressão para a Loja</h2>
+  <form method="post" action="{{ url_for('ideias_3d.nova') }}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="flex:2; min-width:240px;">
+      <label for="termo_ideia" style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">O que você quer imprimir / testar?</label>
+      <input id="termo_ideia" name="termo_ideia" type="text" required placeholder="Ex.: suporte controle ps5, vaso robert plant, placa pix balcão..." style="width:100%;">
+    </div>
+    <div style="flex:1; min-width:180px;">
+      <label for="observacoes" style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">Observação rápida (opcional)</label>
+      <input id="observacoes" name="observacoes" type="text" placeholder="Cor, cliente ou detalhe">
+    </div>
+    <button type="submit" class="btn btn-primary">+ Anotar Ideia</button>
+  </form>
+</section>
+
+<section class="card card-pad" style="margin-bottom:16px;">
+  <form method="post" action="{{ url_for('ideias_3d.sincronizar') }}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="flex:3; min-width:260px;">
+      <label for="google_sheets_webapp_url" style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">URL do Banco em Planilha Google (Web App Apps Script — GitHub Pages)</label>
+      <input id="google_sheets_webapp_url" name="google_sheets_webapp_url" type="url" value="{{ webapp_url }}" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
+    </div>
+    <button type="submit" class="btn">Salvar &amp; Sincronizar Planilha</button>
+  </form>
+</section>
+
+<section class="card card-pad">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap;">
+    <h2 style="margin:0; font-size:16px;">Ideias Anotadas ({{ ideias|length }})</h2>
+    <div style="display:flex; gap:6px;">
+      <a class="btn {% if not status_filtro %}btn-primary{% endif %}" href="{{ url_for('ideias_3d.listar') }}">Todas</a>
+      <a class="btn {% if status_filtro == 'pendente' %}btn-primary{% endif %}" href="{{ url_for('ideias_3d.listar', status='pendente') }}">Pendentes</a>
+      <a class="btn {% if status_filtro == 'concluida' %}btn-primary{% endif %}" href="{{ url_for('ideias_3d.listar', status='concluida') }}">Concluídas</a>
+    </div>
+  </div>
+
+  {% if not ideias %}
+    <p style="color:var(--muted); margin:12px 0;">Nenhuma ideia cadastrada ainda. Digite acima a primeira ideia de impressão!</p>
+  {% else %}
+    <div style="display:grid; gap:12px;">
+      {% for item in ideias %}
+      <article class="card card-pad" style="border:1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <strong style="font-size:16px;">#{{ item.id }} — {{ item.termo_ideia }}</strong>
+            <span class="badge" style="margin-left:6px;">{{ item.status|upper }}</span>
+            {% if item.origem_sync == 'google_sheets' %}
+              <span class="badge" style="margin-left:4px;">Planilha Google</span>
+            {% endif %}
+            {% if item.observacoes %}
+              <div style="font-size:13px; color:var(--muted); margin-top:3px;">Obs.: {{ item.observacoes }}</div>
+            {% endif %}
+          </div>
+          <div style="display:flex; gap:6px;">
+            <form method="post" action="{{ url_for('ideias_3d.processar_uma', ideia_id=item.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-primary">{{ 'Reprocessar' if item.status == 'concluida' else 'Analisar & Fatiar Agora' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('ideias_3d.excluir', ideia_id=item.id) }}" onsubmit="return confirm('Excluir esta nota de ideia?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn">Excluir</button>
+            </form>
+          </div>
+        </div>
+
+        {% if item.status == 'concluida' %}
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px; margin-top:12px; font-size:13px;">
+          <div>
+            <strong>Preços Marketplaces (ML/Shopee):</strong><br>
+            {% if item.preco_medio_centavos > 0 %}
+              Mín: {{ item.preco_min_centavos|brl }} · Médio: <b>{{ item.preco_medio_centavos|brl }}</b> · Máx: {{ item.preco_max_centavos|brl }}
+            {% else %}
+              Consulte anúncios diretos abaixo
+            {% endif %}<br>
+            <strong>Preço Sugerido Loja:</strong> <b>{{ item.preco_sugerido_centavos|brl }}</b>
+          </div>
+          <div>
+            <strong>Tamanho &amp; Fatiamento:</strong><br>
+            Padrão Mercado: {{ item.dimensao_mercado_mm }}<br>
+            Fatiado ({{ item.fator_escala }}x): <b>{{ item.dimensao_fatiada_mm }}</b><br>
+            Peso: <b>{{ item.gramas_estimadas }}g</b> · Tempo: ~{{ item.tempo_estimado_min }} min · Custo: {{ item.custo_estimado_centavos|brl }}
+          </div>
+          <div>
+            <strong>Arquivos Locais:</strong><br>
+            <span style="font-size:12px; word-break:break-all;">{{ item.arquivo_fatiado }}</span>
+          </div>
+        </div>
+
+        {% if item.resumo_analise %}
+          <p style="margin:8px 0 6px; font-size:13px; color:var(--muted);">{{ item.resumo_analise }}</p>
+        {% endif %}
+
+        {% if item.links %}
+        <div style="margin-top:8px; font-size:12.5px;">
+          <strong>Links encontrados (MakerWorld / Mercado Livre / Shopee):</strong>
+          <ul style="margin:4px 0 0 18px; padding:0;">
+            {% if item.modelo_url %}
+              <li><a href="{{ item.modelo_url }}" target="_blank" rel="noopener"><b>[Modelo 3D Principal]</b> {{ item.modelo_url }}</a></li>
+            {% endif %}
+            {% for lk in item.links %}
+              <li>
+                <b>{{ lk.fonte }}:</b>
+                <a href="{{ lk.url }}" target="_blank" rel="noopener">{{ lk.titulo }}</a>
+                {% if lk.preco_brl %} — <b>R$ {{ "%.2f"|format(lk.preco_brl) }}</b>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
