@@ -1412,6 +1412,19 @@ a {
   }
 }
 
+@media (max-width: 760px) {
+  .row-2,
+  .row-3,
+  .row-4 {
+    grid-template-columns: 1fr;
+  }
+  .row-2 > *,
+  .row-3 > *,
+  .row-4 > * {
+    grid-column: span 1 !important;
+  }
+}
+
 /* Planilha Google & Ideias 06h (GitHub Pages) */
 .sheets-status-pill {
   padding: 5px 10px;

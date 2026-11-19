@@ -5,7 +5,8 @@
 
 const IDB_NAME = "ItaArte3DHubDB";
 const IDB_STORE = "kv";
-const IDB_KEY = "hub_state_v1";
+const IDB_KEY = "hub_state_v2";
+const LEGACY_IDB_KEY = "hub_state_v1";
 const SEED_URL = "./seed_hub.json";
 
 let memState = null;
@@ -65,28 +66,44 @@ async function loadState() {
   if (memState) return memState;
   if (!initPromise) {
     initPromise = (async () => {
-      const saved = await idbGet(IDB_KEY);
-      if (saved && saved.meta && Array.isArray(saved.models)) {
-        memState = saved;
+      const savedV2 = await idbGet(IDB_KEY);
+      if (savedV2 && savedV2.meta && Array.isArray(savedV2.models)) {
+        savedV2.nichos = savedV2.nichos || [];
+        savedV2.customers = savedV2.customers || [];
+        savedV2.suppliers = savedV2.suppliers || [];
+        savedV2.purchases = savedV2.purchases || [];
+        savedV2.kits = savedV2.kits || [];
+        savedV2.quotes = savedV2.quotes || [];
+        memState = savedV2;
         return memState;
       }
+
       const res = await fetch(SEED_URL);
       if (!res.ok) {
         throw new Error(`Falha ao carregar ${SEED_URL} (HTTP ${res.status})`);
       }
       const seed = await res.json();
+      const legacyV1 = await idbGet(LEGACY_IDB_KEY);
+      const base = legacyV1 && legacyV1.meta && Array.isArray(legacyV1.models) ? legacyV1 : seed;
+
       memState = {
-        meta: seed.meta || {},
-        models: seed.models || [],
-        printers: seed.printers || [],
-        spools: seed.spools || [],
-        rubrics: seed.rubrics || [],
-        slicing_profiles: seed.slicing_profiles || [],
-        subcategories: seed.subcategories || [],
-        catalog: seed.catalog || [],
-        jobs: seed.jobs || [],
-        sales: seed.sales || [],
-        media: seed.media || [],
+        meta: seed.meta || base.meta || {},
+        models: base.models || [],
+        printers: base.printers || [],
+        spools: base.spools || [],
+        rubrics: base.rubrics || [],
+        slicing_profiles: base.slicing_profiles || [],
+        subcategories: base.subcategories || [],
+        catalog: base.catalog || [],
+        jobs: base.jobs || [],
+        sales: base.sales || [],
+        media: base.media || [],
+        nichos: base.nichos || seed.nichos || [],
+        customers: base.customers || seed.customers || [],
+        suppliers: base.suppliers || seed.suppliers || [],
+        purchases: base.purchases || seed.purchases || [],
+        kits: base.kits || seed.kits || [],
+        quotes: base.quotes || seed.quotes || [],
       };
       await idbSet(IDB_KEY, memState);
       return memState;
@@ -337,7 +354,135 @@ function buildSummary(st) {
     sales_revenue_brl: Math.round(st.sales.reduce((a, s) => a + Number(s.total_price_brl || 0), 0) * 100) / 100,
     media_total: st.media.length,
     media_ready: st.media.filter((m) => m.status === "Legenda Pronta" || m.status === "Agendado").length,
+    customers_total: (st.customers || []).length,
+    quotes_open: (st.quotes || []).filter((q) => q.status === "Rascunho" || q.status === "Enviada").length,
+    suppliers_total: (st.suppliers || []).length,
+    kits_total: (st.kits || []).length,
   };
+}
+
+function computeQuoteMetrics(data) {
+  const qty = Math.max(1, Number(data.quantity || 1));
+  const grams = Math.max(0, Number(data.grams || 0));
+  const timeMin = Math.max(0, Number(data.time_min || 0));
+  const costKg = Math.max(0, Number(data.spool_cost_per_kg_brl ?? 120));
+  const hourly = Math.max(0, Number(data.printer_hourly_cost_brl ?? 2.5));
+  const energyWear = Math.max(0, Number(data.energy_wear_brl ?? 1.5));
+  const extras = Math.max(0, Number(data.extras_brl ?? 0));
+  const mode = data.pricing_mode || "cost_markup";
+  const rateG = Math.max(0, Number(data.rate_per_gram_brl ?? 0.45));
+  const marginPct = Math.max(0, Number(data.margin_percent ?? 160));
+
+  const filamentCost = Math.round(((grams / 1000) * costKg) * 100) / 100;
+  const machineCost = Math.round((((timeMin / 60) * hourly) + energyWear) * 100) / 100;
+  const unitCost = Math.round((filamentCost + machineCost + extras) * 100) / 100;
+
+  let unitPrice = Number(data.unit_price_brl || 0);
+  if (mode === "rate_per_gram") {
+    unitPrice = Math.round((grams * rateG + extras) * 100) / 100;
+  } else if (mode === "cost_markup") {
+    unitPrice = Math.round((unitCost * (1 + marginPct / 100)) * 100) / 100;
+  }
+  const totalPrice = Math.round((unitPrice * qty) * 100) / 100;
+  const profit = Math.round((totalPrice - unitCost * qty) * 100) / 100;
+  return {
+    filament_cost_brl: filamentCost,
+    machine_cost_brl: machineCost,
+    unit_cost_brl: unitCost,
+    unit_price_brl: unitPrice,
+    total_price_brl: totalPrice,
+    estimated_profit_brl: profit,
+  };
+}
+
+function buildErpDashboard(st) {
+  const sum = buildSummary(st);
+  const spools = (st.spools || []).map(enrichSpool);
+  const lowSpools = spools.filter((s) => s.is_low_stock);
+  const lowProducts = (st.catalog || []).filter((c) => c.active !== false && Number(c.stock_qty || 0) <= Number(c.min_stock_alert ?? 1));
+  const sales = st.sales || [];
+  const totalRevenue = sales.reduce((a, s) => a + Number(s.total_price_brl || 0), 0);
+  const estimatedCost = sales.reduce((a, s) => {
+    const cat = (st.catalog || []).find((c) => Number(c.id) === Number(s.catalog_item_id));
+    const unitC = Number(s.unit_cost_brl ?? cat?.unit_cost_brl ?? Number(s.unit_price_brl || 0) * 0.4);
+    return a + unitC * Number(s.quantity || 1);
+  }, 0);
+  const curMonth = String(new Date().getMonth() + 1).padStart(2, "0");
+  const birthdayCustomers = (st.customers || []).filter((c) => {
+    const b = String(c.birthday || "").trim();
+    if (!b) return false;
+    const parts = b.split(/[/-]/);
+    return parts.length >= 2 && parts[1].padStart(2, "0") === curMonth;
+  });
+
+  const ordersByStatus = {};
+  for (const s of sales) {
+    const k = s.fulfillment_status || "Pendente";
+    ordersByStatus[k] = (ordersByStatus[k] || 0) + 1;
+  }
+
+  return {
+    ...sum,
+    revenue_brl: Math.round(totalRevenue * 100) / 100,
+    estimated_profit_brl: Math.round((totalRevenue - estimatedCost) * 100) / 100,
+    low_spools: lowSpools,
+    low_products: lowProducts.slice(0, 12),
+    low_products_count: lowProducts.length,
+    birthday_customers: birthdayCustomers,
+    orders_by_status: ordersByStatus,
+    recent_orders: sales.slice(0, 8),
+    recent_quotes: (st.quotes || []).slice(0, 6),
+    active_jobs: (st.jobs || []).map((j) => enrichJob(st, j)).filter((j) => j.status === "Em Impressão" || j.status === "Pendente").slice(0, 8),
+  };
+}
+
+export async function exportFullHubBackupJson() {
+  const st = await loadState();
+  return JSON.stringify(st, null, 2);
+}
+
+export async function importFullHubBackupJson(data) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.models)) {
+    throw new Error("Arquivo JSON inválido para backup do sistema.");
+  }
+  const st = await loadState();
+  const next = {
+    meta: data.meta || st.meta,
+    models: data.models || st.models,
+    printers: data.printers || st.printers,
+    spools: data.spools || st.spools,
+    rubrics: data.rubrics || st.rubrics,
+    slicing_profiles: data.slicing_profiles || st.slicing_profiles,
+    subcategories: data.subcategories || st.subcategories,
+    catalog: data.catalog || st.catalog,
+    jobs: data.jobs || st.jobs,
+    sales: data.sales || st.sales,
+    media: data.media || st.media,
+    nichos: data.nichos || st.nichos,
+    customers: data.customers || st.customers,
+    suppliers: data.suppliers || st.suppliers,
+    purchases: data.purchases || st.purchases,
+    kits: data.kits || st.kits,
+    quotes: data.quotes || st.quotes,
+  };
+  await persistState(next);
+  return buildSummary(next);
+}
+
+export async function getFullErpState() {
+  return loadState();
+}
+
+export async function mergeRemoteErpData(remote) {
+  if (!remote || typeof remote !== "object") return;
+  const st = await loadState();
+  if (Array.isArray(remote.customers) && remote.customers.length) st.customers = remote.customers;
+  if (Array.isArray(remote.quotes) && remote.quotes.length) st.quotes = remote.quotes;
+  if (Array.isArray(remote.sales) && remote.sales.length) st.sales = remote.sales;
+  if (Array.isArray(remote.suppliers) && remote.suppliers.length) st.suppliers = remote.suppliers;
+  if (Array.isArray(remote.jobs) && remote.jobs.length) st.jobs = remote.jobs;
+  await persistState(st);
+  return buildSummary(st);
 }
 
 function generateCaptionData({ title = "", category = "", price_brl = null, notes = "" }) {
@@ -1103,27 +1248,78 @@ export async function handleServerlessApi(rawUrl, options = {}) {
 
   if (path === "/api/sales") {
     if (method === "GET") {
-      const totalRev = st.sales.reduce((a, s) => a + Number(s.total_price_brl || 0), 0);
-      return { items: st.sales, total: st.sales.length, total_revenue_brl: Math.round(totalRev * 100) / 100 };
+      const fStatus = qp.get("fulfillment_status") || "";
+      const pStatus = qp.get("payment_status") || "";
+      const q = (qp.get("q") || "").trim().toLowerCase();
+      let list = st.sales;
+      if (fStatus) list = list.filter((s) => s.fulfillment_status === fStatus);
+      if (pStatus) list = list.filter((s) => s.payment_status === pStatus);
+      if (q) {
+        list = list.filter((s) =>
+          `${s.item_name} ${s.customer_name} ${s.channel} ${s.notes}`.toLowerCase().includes(q)
+        );
+      }
+      const totalRev = list.reduce((a, s) => a + Number(s.total_price_brl || 0), 0);
+      return { items: list, total: list.length, total_revenue_brl: Math.round(totalRev * 100) / 100 };
     }
     if (method === "POST") {
       const body = parseBody(options);
       const qty = Math.max(1, Number(body.quantity || 1));
       const catItem = body.catalog_item_id ? st.catalog.find((c) => Number(c.id) === Number(body.catalog_item_id)) : null;
-      const itemName = catItem ? catItem.name : (body.item_name || "Produto 3D");
-      const unitPrice = body.unit_price_brl != null ? Number(body.unit_price_brl) : (catItem ? Number(catItem.sale_price_brl) : 0);
-      const total = Math.round(qty * unitPrice * 100) / 100;
+      const kitItem = body.kit_id ? (st.kits || []).find((k) => Number(k.id) === Number(body.kit_id)) : null;
+      const custObj = body.customer_id ? (st.customers || []).find((c) => Number(c.id) === Number(body.customer_id)) : null;
+
+      const customerName = String(body.customer_name || custObj?.name || "Consumidor Final").trim();
+      const customerWhatsapp = String(body.customer_whatsapp || custObj?.whatsapp || "").trim();
+      const itemName = kitItem ? `Kit: ${kitItem.name}` : catItem ? catItem.name : (body.item_name || "Peça / Pedido 3D");
+      const unitPrice = body.unit_price_brl != null
+        ? Number(body.unit_price_brl)
+        : kitItem
+          ? Number(kitItem.sale_price_brl || 0)
+          : catItem
+            ? Number(catItem.sale_price_brl || 0)
+            : 0;
+      const unitCost = body.unit_cost_brl != null
+        ? Number(body.unit_cost_brl)
+        : kitItem
+          ? Number(kitItem.total_cost_brl || 0)
+          : catItem
+            ? Number(catItem.unit_cost_brl || 0)
+            : 0;
+      const discount = Math.max(0, Number(body.discount_brl || 0));
+      const freight = Math.max(0, Number(body.freight_brl || 0));
+      const total = Math.max(0, Math.round((qty * unitPrice - discount + freight) * 100) / 100);
 
       let missing = qty;
-      let fulfillment = "Sob Encomenda";
-      if (catItem) {
+      let fulfillment = body.fulfillment_status || "Sob Encomenda";
+      if (kitItem && Array.isArray(kitItem.items)) {
+        let minAvail = qty;
+        for (const comp of kitItem.items) {
+          const prod = comp.catalog_item_id ? st.catalog.find((c) => Number(c.id) === Number(comp.catalog_item_id)) : null;
+          if (prod) {
+            const need = qty * Number(comp.qty || 1);
+            const avail = Math.max(0, Number(prod.stock_qty || 0));
+            const used = Math.min(avail, need);
+            prod.stock_qty = avail - used;
+            if (used < need) minAvail = 0;
+          }
+        }
+        missing = minAvail >= qty ? 0 : qty;
+        if (!body.fulfillment_status) {
+          fulfillment = missing === 0 ? "Entregue" : "Na Fila";
+        }
+      } else if (catItem) {
         const avail = Math.max(0, Number(catItem.stock_qty || 0));
         const usedStock = Math.min(avail, qty);
         catItem.stock_qty = avail - usedStock;
         missing = qty - usedStock;
-        if (missing === 0) fulfillment = "Pronta Entrega";
-        else if (usedStock > 0) fulfillment = "Parcial / Na Fila";
-        else fulfillment = "Na Fila";
+        if (!body.fulfillment_status) {
+          if (missing === 0) fulfillment = "Pronto para Entrega";
+          else if (usedStock > 0) fulfillment = "Parcial / Na Fila";
+          else fulfillment = "Na Fila";
+        }
+      } else if (!body.fulfillment_status) {
+        fulfillment = body.auto_queue_missing !== false ? "Na Fila" : "Pronto para Entrega";
       }
 
       let queuedJob = null;
@@ -1131,9 +1327,9 @@ export async function handleServerlessApi(rawUrl, options = {}) {
         const ts = nowIso();
         queuedJob = {
           id: nextId(st.jobs),
-          model_id: catItem?.model_id || null,
-          printer_id: null,
-          spool_id: null,
+          model_id: body.model_id || catItem?.model_id || null,
+          printer_id: body.printer_id ? Number(body.printer_id) : null,
+          spool_id: body.spool_id ? Number(body.spool_id) : null,
           catalog_item_id: catItem?.id || null,
           rubric_id: st.rubrics[0]?.id || null,
           rubric_name: st.rubrics[0]?.name || "Encomendas Gerais",
@@ -1141,13 +1337,13 @@ export async function handleServerlessApi(rawUrl, options = {}) {
           slicing_notes: "",
           title: itemName,
           target_type: "Encomenda",
-          customer_name: body.customer_name || "",
+          customer_name: customerName,
           quantity: missing,
-          estimated_grams: Number(catItem?.filament_grams || 50) * missing,
-          estimated_time_min: 90 * missing,
+          estimated_grams: Number(body.estimated_grams || catItem?.filament_grams || 50) * missing,
+          estimated_time_min: Number(body.estimated_time_min || 90) * missing,
           priority: "Alta",
           status: "Pendente",
-          notes: `Pedido via ${body.channel || "WhatsApp"}`,
+          notes: `Pedido via ${body.channel || "WhatsApp"}${body.notes ? ` • ${body.notes}` : ""}`,
           created_at: ts,
           updated_at: ts,
         };
@@ -1157,16 +1353,26 @@ export async function handleServerlessApi(rawUrl, options = {}) {
       const sale = {
         id: nextId(st.sales),
         catalog_item_id: catItem?.id || null,
+        kit_id: kitItem?.id || null,
+        quote_id: body.quote_id ? Number(body.quote_id) : null,
+        customer_id: custObj?.id || null,
+        customer_name: customerName,
+        customer_whatsapp: customerWhatsapp,
         item_name: itemName,
-        customer_name: body.customer_name || "Cliente",
-        channel: body.channel || "Instagram",
+        channel: body.channel || "WhatsApp",
         quantity: qty,
         unit_price_brl: unitPrice,
+        unit_cost_brl: unitCost,
+        discount_brl: discount,
+        freight_brl: freight,
         total_price_brl: total,
+        payment_method: body.payment_method || "Pix",
         payment_status: body.payment_status || "Pendente",
         fulfillment_status: fulfillment,
+        linked_job_id: queuedJob?.id || null,
         notes: body.notes || "",
         created_at: nowIso(),
+        updated_at: nowIso(),
       };
       st.sales.unshift(sale);
       await persistState(st);
@@ -1183,6 +1389,12 @@ export async function handleServerlessApi(rawUrl, options = {}) {
       st.sales.splice(idx, 1);
       await persistState(st);
       return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      const body = parseBody(options);
+      st.sales[idx] = { ...st.sales[idx], ...body, id, updated_at: nowIso() };
+      await persistState(st);
+      return st.sales[idx];
     }
   }
 
@@ -1280,6 +1492,428 @@ export async function handleServerlessApi(rawUrl, options = {}) {
       st.media[idx] = { ...st.media[idx], ...parseBody(options), id, updated_at: nowIso() };
       await persistState(st);
       return st.media[idx];
+    }
+  }
+
+  // ---- 7. ERP Loja (Dashboard, Clientes, Cotações 3D, Fornecedores, Compras, Kits, Nichos) ---- //
+  if (path === "/api/erp/dashboard" && method === "GET") {
+    return buildErpDashboard(st);
+  }
+
+  // Clientes
+  if (path === "/api/customers") {
+    if (method === "GET") {
+      const q = (qp.get("q") || "").trim().toLowerCase();
+      const bMonth = (qp.get("birthday_month") || "").trim();
+      let items = (st.customers || []).map((c) => {
+        const orders = (st.sales || []).filter(
+          (s) => Number(s.customer_id) === Number(c.id) || (c.name && s.customer_name?.toLowerCase() === c.name.toLowerCase())
+        );
+        const totalSpent = Math.round(orders.reduce((a, s) => a + Number(s.total_price_brl || 0), 0) * 100) / 100;
+        return { ...c, orders_count: orders.length, total_spent_brl: totalSpent };
+      });
+      if (q) {
+        items = items.filter((c) => `${c.name} ${c.whatsapp} ${c.city} ${c.notes}`.toLowerCase().includes(q));
+      }
+      if (bMonth) {
+        const bm = bMonth.padStart(2, "0");
+        items = items.filter((c) => {
+          const parts = String(c.birthday || "").split(/[/-]/);
+          return parts.length >= 2 && parts[1].padStart(2, "0") === bm;
+        });
+      }
+      return { items, total: items.length };
+    }
+    if (method === "POST") {
+      const body = parseBody(options);
+      const name = String(body.name || "").trim();
+      if (!name) httpError("Informe o nome do cliente.");
+      const ts = nowIso();
+      const created = {
+        id: nextId(st.customers),
+        name,
+        whatsapp: String(body.whatsapp || "").trim(),
+        email: String(body.email || "").trim(),
+        city: String(body.city || "Itamarandiba - MG").trim(),
+        birthday: String(body.birthday || "").trim(),
+        notes: String(body.notes || "").trim(),
+        created_at: ts,
+        updated_at: ts,
+      };
+      st.customers.unshift(created);
+      await persistState(st);
+      return { ...created, orders_count: 0, total_spent_brl: 0 };
+    }
+  }
+
+  mMatch = path.match(/^\/api\/customers\/(\d+)$/);
+  if (mMatch) {
+    const id = Number(mMatch[1]);
+    const idx = (st.customers || []).findIndex((c) => Number(c.id) === id);
+    if (idx < 0) httpError("Cliente não encontrado.");
+    if (method === "DELETE") {
+      st.customers.splice(idx, 1);
+      await persistState(st);
+      return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      st.customers[idx] = { ...st.customers[idx], ...parseBody(options), id, updated_at: nowIso() };
+      await persistState(st);
+      return st.customers[idx];
+    }
+  }
+
+  // Cotações / Orçamentos 3D para Clientes
+  if (path === "/api/quotes") {
+    if (method === "GET") {
+      const status = qp.get("status") || "";
+      const q = (qp.get("q") || "").trim().toLowerCase();
+      let items = st.quotes || [];
+      if (status) items = items.filter((x) => x.status === status);
+      if (q) items = items.filter((x) => `${x.code} ${x.title} ${x.customer_name} ${x.notes}`.toLowerCase().includes(q));
+      return { items, total: items.length };
+    }
+    if (method === "POST") {
+      const body = parseBody(options);
+      const title = String(body.title || "").trim();
+      if (!title) httpError("Informe o nome da peça/projeto do orçamento.");
+      const custObj = body.customer_id ? (st.customers || []).find((c) => Number(c.id) === Number(body.customer_id)) : null;
+      const printerObj = body.printer_id ? (st.printers || []).find((p) => Number(p.id) === Number(body.printer_id)) : null;
+      const spoolObj = body.spool_id ? (st.spools || []).find((s) => Number(s.id) === Number(body.spool_id)) : null;
+
+      const calcInput = {
+        ...body,
+        spool_cost_per_kg_brl: body.spool_cost_per_kg_brl ?? spoolObj?.cost_per_kg_brl ?? 120,
+        printer_hourly_cost_brl: body.printer_hourly_cost_brl ?? printerObj?.hourly_cost_brl ?? 2.5,
+      };
+      const metrics = computeQuoteMetrics(calcInput);
+      const nextNum = nextId(st.quotes);
+      const ts = nowIso();
+      const created = {
+        id: nextNum,
+        code: body.code || `ORC-${String(nextNum).padStart(3, "0")}`,
+        customer_id: custObj?.id || (body.customer_id ? Number(body.customer_id) : null),
+        customer_name: String(body.customer_name || custObj?.name || "Cliente").trim(),
+        customer_whatsapp: String(body.customer_whatsapp || custObj?.whatsapp || "").trim(),
+        model_id: body.model_id ? Number(body.model_id) : null,
+        catalog_item_id: body.catalog_item_id ? Number(body.catalog_item_id) : null,
+        printer_id: printerObj?.id || null,
+        printer_name: printerObj?.name || "",
+        spool_id: spoolObj?.id || null,
+        spool_label: spoolObj ? `${spoolObj.material} ${spoolObj.color_name}` : "",
+        title,
+        quantity: Math.max(1, Number(body.quantity || 1)),
+        grams: Math.max(0, Number(body.grams || 0)),
+        time_min: Math.max(0, Number(body.time_min || 0)),
+        spool_cost_per_kg_brl: Number(calcInput.spool_cost_per_kg_brl),
+        printer_hourly_cost_brl: Number(calcInput.printer_hourly_cost_brl),
+        energy_wear_brl: Number(body.energy_wear_brl ?? 1.5),
+        extras_brl: Number(body.extras_brl ?? 0),
+        pricing_mode: body.pricing_mode || "cost_markup",
+        rate_per_gram_brl: Number(body.rate_per_gram_brl ?? 0.45),
+        margin_percent: Number(body.margin_percent ?? 160),
+        ...metrics,
+        lead_days: Math.max(1, Number(body.lead_days || 2)),
+        status: body.status || "Enviada",
+        notes: String(body.notes || "").trim(),
+        created_at: ts,
+        updated_at: ts,
+      };
+      st.quotes.unshift(created);
+      await persistState(st);
+      return created;
+    }
+  }
+
+  mMatch = path.match(/^\/api\/quotes\/(\d+)\/approve$/);
+  if (mMatch && method === "POST") {
+    const id = Number(mMatch[1]);
+    const idx = (st.quotes || []).findIndex((q) => Number(q.id) === id);
+    if (idx < 0) httpError("Cotação não encontrada.");
+    const quote = st.quotes[idx];
+    const ts = nowIso();
+    quote.status = "Aprovada";
+    quote.updated_at = ts;
+
+    const job = {
+      id: nextId(st.jobs),
+      model_id: quote.model_id || null,
+      printer_id: quote.printer_id || null,
+      spool_id: quote.spool_id || null,
+      catalog_item_id: quote.catalog_item_id || null,
+      rubric_id: st.rubrics[0]?.id || null,
+      rubric_name: st.rubrics[0]?.name || "Encomendas Gerais",
+      slicing_profile_id: null,
+      slicing_notes: quote.notes || "",
+      title: `${quote.code} — ${quote.title}`,
+      target_type: "Encomenda",
+      customer_name: quote.customer_name || "",
+      quantity: Number(quote.quantity || 1),
+      estimated_grams: Number(quote.grams || 0) * Number(quote.quantity || 1),
+      estimated_time_min: Number(quote.time_min || 60) * Number(quote.quantity || 1),
+      priority: "Alta",
+      status: "Pendente",
+      notes: `Origem: Orçamento ${quote.code}${quote.notes ? ` • ${quote.notes}` : ""}`,
+      created_at: ts,
+      updated_at: ts,
+    };
+    st.jobs.unshift(job);
+
+    const sale = {
+      id: nextId(st.sales),
+      catalog_item_id: quote.catalog_item_id || null,
+      kit_id: null,
+      quote_id: quote.id,
+      customer_id: quote.customer_id || null,
+      customer_name: quote.customer_name || "Cliente",
+      customer_whatsapp: quote.customer_whatsapp || "",
+      item_name: `${quote.code} — ${quote.title}`,
+      channel: "WhatsApp",
+      quantity: Number(quote.quantity || 1),
+      unit_price_brl: Number(quote.unit_price_brl || 0),
+      unit_cost_brl: Number(quote.unit_cost_brl || 0),
+      discount_brl: 0,
+      freight_brl: 0,
+      total_price_brl: Number(quote.total_price_brl || 0),
+      payment_method: "Pix",
+      payment_status: "Sinal 50%",
+      fulfillment_status: "Na Fila",
+      linked_job_id: job.id,
+      notes: `Aprovado da cotação ${quote.code}`,
+      created_at: ts,
+      updated_at: ts,
+    };
+    st.sales.unshift(sale);
+    await persistState(st);
+    return { quote, sale, job: enrichJob(st, job) };
+  }
+
+  mMatch = path.match(/^\/api\/quotes\/(\d+)$/);
+  if (mMatch) {
+    const id = Number(mMatch[1]);
+    const idx = (st.quotes || []).findIndex((q) => Number(q.id) === id);
+    if (idx < 0) httpError("Cotação não encontrada.");
+    if (method === "DELETE") {
+      st.quotes.splice(idx, 1);
+      await persistState(st);
+      return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      const merged = { ...st.quotes[idx], ...parseBody(options), id, updated_at: nowIso() };
+      const metrics = computeQuoteMetrics(merged);
+      st.quotes[idx] = { ...merged, ...metrics };
+      await persistState(st);
+      return st.quotes[idx];
+    }
+  }
+
+  // Fornecedores
+  if (path === "/api/suppliers") {
+    if (method === "GET") return { items: st.suppliers || [], total: (st.suppliers || []).length };
+    if (method === "POST") {
+      const body = parseBody(options);
+      const name = String(body.name || "").trim();
+      if (!name) httpError("Informe o nome do fornecedor.");
+      const created = {
+        id: nextId(st.suppliers),
+        name,
+        type: String(body.type || "Atacado / Filamentos"),
+        contact: String(body.contact || ""),
+        whatsapp: String(body.whatsapp || ""),
+        site: String(body.site || ""),
+        city_uf: String(body.city_uf || ""),
+        lead_days: Number(body.lead_days || 5),
+        min_order_brl: Number(body.min_order_brl || 0),
+        notes: String(body.notes || ""),
+        active: body.active !== false,
+        created_at: nowIso(),
+      };
+      st.suppliers.unshift(created);
+      await persistState(st);
+      return created;
+    }
+  }
+
+  mMatch = path.match(/^\/api\/suppliers\/(\d+)$/);
+  if (mMatch) {
+    const id = Number(mMatch[1]);
+    const idx = (st.suppliers || []).findIndex((s) => Number(s.id) === id);
+    if (idx < 0) httpError("Fornecedor não encontrado.");
+    if (method === "DELETE") {
+      st.suppliers.splice(idx, 1);
+      await persistState(st);
+      return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      st.suppliers[idx] = { ...st.suppliers[idx], ...parseBody(options), id };
+      await persistState(st);
+      return st.suppliers[idx];
+    }
+  }
+
+  // Compras de Reposição
+  if (path === "/api/purchases") {
+    if (method === "GET") return { items: st.purchases || [], total: (st.purchases || []).length };
+    if (method === "POST") {
+      const body = parseBody(options);
+      const qty = Math.max(1, Number(body.quantity || 1));
+      const unitCost = Math.max(0, Number(body.unit_cost_brl || 0));
+      const freight = Math.max(0, Number(body.freight_brl || 0));
+      const taxes = Math.max(0, Number(body.taxes_brl || 0));
+      const other = Math.max(0, Number(body.other_costs_brl || 0));
+      const total = Math.round((qty * unitCost + freight + taxes + other) * 100) / 100;
+      const finalUnit = Math.round((total / qty) * 100) / 100;
+      const supObj = body.supplier_id ? (st.suppliers || []).find((s) => Number(s.id) === Number(body.supplier_id)) : null;
+
+      let itemName = String(body.item_name || "").trim();
+      const kind = body.target_kind || "catalog";
+      const targetId = body.target_id ? Number(body.target_id) : null;
+
+      if (kind === "catalog" && targetId) {
+        const cat = st.catalog.find((c) => Number(c.id) === targetId);
+        if (cat) {
+          cat.stock_qty = Number(cat.stock_qty || 0) + qty;
+          cat.unit_cost_brl = finalUnit;
+          if (!itemName) itemName = cat.name;
+        }
+      } else if (kind === "spool" && targetId) {
+        const spIdx = st.spools.findIndex((s) => Number(s.id) === targetId);
+        if (spIdx >= 0) {
+          const sp = st.spools[spIdx];
+          const addGrams = qty * 1000;
+          st.spools[spIdx] = enrichSpool({
+            ...sp,
+            initial_grams: Number(sp.initial_grams || 1000) + addGrams,
+            remaining_grams: Number(sp.remaining_grams || 0) + addGrams,
+            cost_per_kg_brl: finalUnit > 0 ? finalUnit : sp.cost_per_kg_brl,
+            updated_at: nowIso(),
+          });
+          if (!itemName) itemName = `${sp.material} ${sp.color_name} (${qty} kg)`;
+        }
+      }
+
+      const created = {
+        id: nextId(st.purchases),
+        supplier_id: supObj?.id || null,
+        supplier_name: supObj?.name || String(body.supplier_name || "Fornecedor Avulso"),
+        target_kind: kind,
+        target_id: targetId,
+        item_name: itemName || "Compra de Reposição",
+        quantity: qty,
+        unit_cost_brl: unitCost,
+        freight_brl: freight,
+        taxes_brl: taxes,
+        other_costs_brl: other,
+        final_unit_cost_brl: finalUnit,
+        total_brl: total,
+        notes: String(body.notes || "").trim(),
+        created_at: nowIso(),
+      };
+      st.purchases.unshift(created);
+      await persistState(st);
+      return created;
+    }
+  }
+
+  mMatch = path.match(/^\/api\/purchases\/(\d+)$/);
+  if (mMatch && method === "DELETE") {
+    const id = Number(mMatch[1]);
+    const idx = (st.purchases || []).findIndex((p) => Number(p.id) === id);
+    if (idx < 0) httpError("Compra não encontrada.");
+    st.purchases.splice(idx, 1);
+    await persistState(st);
+    return { deleted: true, id };
+  }
+
+  // Kits & Combos
+  if (path === "/api/kits") {
+    if (method === "GET") return { items: st.kits || [], total: (st.kits || []).length };
+    if (method === "POST") {
+      const body = parseBody(options);
+      const name = String(body.name || "").trim();
+      if (!name) httpError("Informe o nome do Kit / Combo.");
+      const rawItems = Array.isArray(body.items) ? body.items : [];
+      const items = rawItems.map((it) => {
+        const prod = it.catalog_item_id ? st.catalog.find((c) => Number(c.id) === Number(it.catalog_item_id)) : null;
+        return {
+          catalog_item_id: prod?.id || null,
+          name: it.name || prod?.name || "Item",
+          qty: Math.max(1, Number(it.qty || 1)),
+          unit_cost_brl: Number(it.unit_cost_brl ?? prod?.unit_cost_brl ?? 0),
+        };
+      });
+      const sumCost = items.reduce((a, it) => a + it.unit_cost_brl * it.qty, 0);
+      const totalCost = body.total_cost_brl != null ? Number(body.total_cost_brl) : Math.round(sumCost * 100) / 100;
+      const created = {
+        id: nextId(st.kits),
+        name,
+        level: String(body.level || "Médio"),
+        niche: String(body.niche || "Presentes Personalizados & Kits Prontos"),
+        items,
+        total_cost_brl: totalCost,
+        sale_price_brl: Number(body.sale_price_brl || Math.round(totalCost * 2 * 100) / 100),
+        notes: String(body.notes || "").trim(),
+        active: body.active !== false,
+        created_at: nowIso(),
+      };
+      st.kits.unshift(created);
+      await persistState(st);
+      return created;
+    }
+  }
+
+  mMatch = path.match(/^\/api\/kits\/(\d+)$/);
+  if (mMatch) {
+    const id = Number(mMatch[1]);
+    const idx = (st.kits || []).findIndex((k) => Number(k.id) === id);
+    if (idx < 0) httpError("Kit não encontrado.");
+    if (method === "DELETE") {
+      st.kits.splice(idx, 1);
+      await persistState(st);
+      return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      st.kits[idx] = { ...st.kits[idx], ...parseBody(options), id };
+      await persistState(st);
+      return st.kits[idx];
+    }
+  }
+
+  // Nichos da Loja
+  if (path === "/api/nichos") {
+    if (method === "GET") return { items: st.nichos || [], total: (st.nichos || []).length };
+    if (method === "POST") {
+      const body = parseBody(options);
+      const nome = String(body.nome || "").trim();
+      if (!nome) httpError("Informe o nome do nicho.");
+      const created = {
+        id: nextId(st.nichos),
+        nome,
+        cor: String(body.cor || "#38bdf8"),
+        descricao: String(body.descricao || ""),
+        ativo: body.ativo !== false,
+        created_at: nowIso(),
+      };
+      st.nichos.push(created);
+      await persistState(st);
+      return created;
+    }
+  }
+
+  mMatch = path.match(/^\/api\/nichos\/(\d+)$/);
+  if (mMatch) {
+    const id = Number(mMatch[1]);
+    const idx = (st.nichos || []).findIndex((n) => Number(n.id) === id);
+    if (idx < 0) httpError("Nicho não encontrado.");
+    if (method === "DELETE") {
+      st.nichos.splice(idx, 1);
+      await persistState(st);
+      return { deleted: true, id };
+    }
+    if (method === "PATCH") {
+      st.nichos[idx] = { ...st.nichos[idx], ...parseBody(options), id };
+      await persistState(st);
+      return st.nichos[idx];
     }
   }
 

@@ -28,29 +28,41 @@
       </div>
 
       <nav class="tabs-bar" aria-label="Módulos do sistema">
-        <button class="tab-btn active" data-tab="models" type="button">
-          Modelos <span id="badge-models" class="tab-count tnum">0</span>
+        <button class="tab-btn active" data-tab="dashboard" type="button">
+          🏠 Painel Geral
+        </button>
+        <button class="tab-btn" data-tab="orders" type="button">
+          🛒 Pedidos &amp; PDV <span id="badge-orders" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="quotes" type="button">
+          🧮 Cotações 3D <span id="badge-quotes" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="queue" type="button">
-          Fila de Impressão <span id="badge-queue" class="tab-count tnum">0</span>
+          🖨️ Fila 3D <span id="badge-queue" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="models" type="button">
+          🧩 Modelos 3D <span id="badge-models" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="printers" type="button">
-          Impressoras <span id="badge-printers" class="tab-count tnum">0</span>
+          🤖 Impressoras <span id="badge-printers" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="inventory" type="button">
-          Estoque <span id="badge-inventory" class="tab-count tnum">0</span>
+          🧵 Estoque <span id="badge-inventory" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="catalog" type="button">
-          Catálogo &amp; Vendas <span id="badge-catalog" class="tab-count tnum">0</span>
+          📦 Catálogo &amp; Kits <span id="badge-catalog" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="crm" type="button">
+          👥 Clientes &amp; Fornecedores <span id="badge-crm" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="media" type="button">
-          Fotos &amp; Instagram <span id="badge-media" class="tab-count tnum">0</span>
-        </button>
-        <button class="tab-btn" data-tab="archived" type="button">
-          Arquivados <span id="badge-archived" class="tab-count tnum">0</span>
+          📸 Instagram <span id="badge-media" class="tab-count tnum">0</span>
         </button>
         <button class="tab-btn" data-tab="ideias" type="button">
-          💡 Ideias 06h &amp; Planilha
+          💡 Ideias 06h &amp; Sync
+        </button>
+        <button class="tab-btn" data-tab="archived" type="button">
+          🗄️ Arquivados <span id="badge-archived" class="tab-count tnum">0</span>
         </button>
       </nav>
     </div>
@@ -62,8 +74,363 @@
       <button id="retry-btn" class="btn btn-secondary btn-sm" type="button">Tentar novamente</button>
     </div>
 
-    <!-- ABA 1: MODELOS -->
-    <section id="tab-models" class="tab-panel">
+    <!-- ABA 0: PAINEL GERAL / DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel">
+      <div class="section-bar">
+        <div>
+          <h2 class="section-title">Painel Geral — Loja ItaDigital &amp; Ita Arte 3D</h2>
+          <p class="brand-sub">Visão unificada da loja física/online, fila de impressão 3D, filamentos, cotações e aniversariantes.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" data-dash-go="quotes" type="button">+ Nova Cotação 3D</button>
+          <button class="btn btn-accent btn-sm" data-dash-go="orders" type="button">+ Novo Pedido / PDV</button>
+          <button class="btn btn-secondary btn-sm" data-dash-go="queue" type="button">Ver Fila 3D</button>
+          <button class="btn btn-secondary btn-sm" data-dash-go="models" type="button">Explorar 1.111 Modelos</button>
+        </div>
+      </div>
+
+      <div class="metrics-row-4" id="dash-metrics"></div>
+
+      <div class="row-2" style="margin-top:16px; align-items:start;">
+        <div class="panel">
+          <p class="panel-label">Pedidos de Clientes Recentes</p>
+          <div id="dash-recent-orders" class="queue-list" style="margin-top:8px;"></div>
+        </div>
+        <div class="panel">
+          <p class="panel-label">Fila de Impressão Ativa (Agora)</p>
+          <div id="dash-active-jobs" class="queue-list" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <p class="panel-label">Alertas de Estoque, Filamento &amp; Aniversariantes do Mês</p>
+        <div id="dash-alerts" style="margin-top:8px;"></div>
+      </div>
+    </section>
+
+    <!-- ABA 1: PEDIDOS DE CLIENTES & PDV -->
+    <section id="tab-orders" class="tab-panel" hidden>
+      <div class="metrics-row-4" id="orders-metrics"></div>
+
+      <div class="panel" style="margin-bottom:18px;">
+        <div class="section-bar" style="margin-bottom:10px;">
+          <h2 class="section-title">Novo Pedido de Cliente / PDV Unificado</h2>
+          <strong id="ord-live-total" class="tnum" style="font-size:18px; color:var(--cyan);">R$ 0,00</strong>
+        </div>
+        <form id="order-create-form" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="row-3">
+            <div class="field">
+              <label for="ord-customer-sel">Cliente Cadastrado</label>
+              <select id="ord-customer-sel" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="ord-customer-name">Nome do Cliente *</label>
+              <input id="ord-customer-name" class="input" type="text" placeholder="Ex: João Silva ou Consumidor Final" required />
+            </div>
+            <div class="field">
+              <label for="ord-customer-wa">WhatsApp (com DDD)</label>
+              <input id="ord-customer-wa" class="input tnum" type="text" placeholder="38999990000" />
+            </div>
+          </div>
+          <div class="row-3">
+            <div class="field">
+              <label for="ord-product-sel">Produto / Peça 3D do Catálogo</label>
+              <select id="ord-product-sel" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="ord-kit-sel">Ou escolher Kit / Combo</label>
+              <select id="ord-kit-sel" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="ord-item-name">Descrição do Item *</label>
+              <input id="ord-item-name" class="input" type="text" placeholder="Ex: Placa Pix Personalizada / Caneca" required />
+            </div>
+          </div>
+          <div class="row-4">
+            <div class="field">
+              <label for="ord-qty">Qtd</label>
+              <input id="ord-qty" class="input tnum" type="number" min="1" value="1" />
+            </div>
+            <div class="field">
+              <label for="ord-unit-price">Preço Unit. (R$)</label>
+              <input id="ord-unit-price" class="input tnum" type="number" step="0.01" min="0" value="35" />
+            </div>
+            <div class="field">
+              <label for="ord-discount">Desconto (R$)</label>
+              <input id="ord-discount" class="input tnum" type="number" step="0.01" min="0" value="0" />
+            </div>
+            <div class="field">
+              <label for="ord-freight">Frete / Entrega (R$)</label>
+              <input id="ord-freight" class="input tnum" type="number" step="0.01" min="0" value="0" />
+            </div>
+          </div>
+          <div class="row-4">
+            <div class="field">
+              <label for="ord-channel">Canal</label>
+              <select id="ord-channel" class="select">
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Loja Física">Loja Física / Balcão</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Shopee / ML">Shopee / Mercado Livre</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ord-pay-method">Forma Pagamento</label>
+              <select id="ord-pay-method" class="select">
+                <option value="Pix">Pix</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão Crédito">Cartão Crédito</option>
+                <option value="Cartão Débito">Cartão Débito</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ord-pay-status">Status Pagamento</label>
+              <select id="ord-pay-status" class="select">
+                <option value="Pago">Pago</option>
+                <option value="Sinal 50%">Sinal 50%</option>
+                <option value="Pendente">Pendente</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ord-status">Status Pedido</label>
+              <select id="ord-status" class="select">
+                <option value="">Automático (Estoque ou Fila 3D)</option>
+                <option value="Aguardando Sinal">Aguardando Sinal</option>
+                <option value="Na Fila">Na Fila</option>
+                <option value="Em Produção">Em Produção</option>
+                <option value="Pronto para Entrega">Pronto para Entrega</option>
+                <option value="Entregue">Entregue</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2" style="align-items:center;">
+            <input id="ord-notes" class="input" type="text" placeholder="Observações (cor escolhida, frase gravada, prazo combinado)..." />
+            <label class="checkbox-row" style="margin:0;">
+              <input id="ord-auto-queue" type="checkbox" checked />
+              <span>Enviar para Fila 3D automaticamente se não houver pronta entrega</span>
+            </label>
+          </div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary btn-sm" type="submit">✓ Registrar Pedido / Venda</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="section-bar">
+        <h2 class="section-title">Acompanhamento de Pedidos de Clientes</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input id="ord-filter-q" class="input" style="width:200px;" type="search" placeholder="Buscar cliente ou peça..." />
+          <select id="ord-filter-status" class="select" style="width:auto;">
+            <option value="">Todos os status</option>
+            <option value="Aguardando Sinal">Aguardando Sinal</option>
+            <option value="Na Fila">Na Fila</option>
+            <option value="Em Produção">Em Produção</option>
+            <option value="Pronto para Entrega">Pronto para Entrega</option>
+            <option value="Pronta Entrega">Pronta Entrega</option>
+            <option value="Entregue">Entregue</option>
+          </select>
+          <select id="ord-filter-payment" class="select" style="width:auto;">
+            <option value="">Todos pagamentos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Sinal 50%">Sinal 50%</option>
+            <option value="Pago">Pago</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pedido / Data</th>
+              <th>Item / Canal</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Pagamento</th>
+              <th>Andamento</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ABA 2: COTAÇÕES 3D & FORNECEDORES -->
+    <section id="tab-quotes" class="tab-panel" hidden>
+      <div class="panel" style="margin-bottom:18px;">
+        <div class="section-bar" style="margin-bottom:10px;">
+          <div>
+            <h2 class="section-title">Calculadora de Cotação / Orçamento 3D para Cliente</h2>
+            <p class="brand-sub">Calcule custo de filamento, máquina, energia e margem; envie por WhatsApp/PDF e aprove direto para Pedido + Fila 3D.</p>
+          </div>
+        </div>
+        <form id="quote-create-form" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="row-3">
+            <div class="field">
+              <label for="qt-customer-sel">Cliente Cadastrado</label>
+              <select id="qt-customer-sel" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="qt-customer-name">Nome do Cliente *</label>
+              <input id="qt-customer-name" class="input" type="text" placeholder="Ex: Maria Clara" required />
+            </div>
+            <div class="field">
+              <label for="qt-customer-wa">WhatsApp Cliente</label>
+              <input id="qt-customer-wa" class="input tnum" type="text" placeholder="38999990000" />
+            </div>
+          </div>
+          <div class="row-3">
+            <div class="field">
+              <label for="qt-catalog-ref">Puxar Produto do Catálogo (opcional)</label>
+              <select id="qt-catalog-ref" class="select"></select>
+            </div>
+            <div class="field" style="grid-column: span 2;">
+              <label for="qt-title">Nome da Peça / Projeto 3D *</label>
+              <input id="qt-title" class="input" type="text" placeholder="Ex: Troféu Personalizado Dourado 20cm" required />
+            </div>
+          </div>
+          <div class="row-4">
+            <div class="field">
+              <label for="qt-printer">Impressora</label>
+              <select id="qt-printer" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="qt-hourly">Custo Máquina (R$/h)</label>
+              <input id="qt-hourly" class="input tnum" type="number" step="0.5" min="0" value="2.5" />
+            </div>
+            <div class="field">
+              <label for="qt-spool">Filamento / Carretel</label>
+              <select id="qt-spool" class="select"></select>
+            </div>
+            <div class="field">
+              <label for="qt-cost-kg">Filamento (R$/kg)</label>
+              <input id="qt-cost-kg" class="input tnum" type="number" step="1" min="0" value="120" />
+            </div>
+          </div>
+          <div class="row-4">
+            <div class="field">
+              <label for="qt-grams">Peso Fatiado (g)</label>
+              <input id="qt-grams" class="input tnum" type="number" step="0.1" min="0" value="100" />
+            </div>
+            <div class="field">
+              <label for="qt-time">Tempo Impressão (min)</label>
+              <input id="qt-time" class="input tnum" type="number" min="0" value="150" />
+            </div>
+            <div class="field">
+              <label for="qt-qty">Quantidade</label>
+              <input id="qt-qty" class="input tnum" type="number" min="1" value="1" />
+            </div>
+            <div class="field">
+              <label for="qt-lead-days">Prazo (dias úteis)</label>
+              <input id="qt-lead-days" class="input tnum" type="number" min="1" value="2" />
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="qt-energy">Energia / Desgaste Extra (R$)</label>
+              <input id="qt-energy" class="input tnum" type="number" step="0.5" value="2.0" />
+            </div>
+            <div class="field">
+              <label for="qt-extras">Embalagem / Argola / Pintura (R$)</label>
+              <input id="qt-extras" class="input tnum" type="number" step="0.5" value="3.0" />
+            </div>
+          </div>
+          <div class="row-4">
+            <div class="field">
+              <label for="qt-mode">Regra de Preço</label>
+              <select id="qt-mode" class="select">
+                <option value="cost_markup">Custo Real + Margem (%)</option>
+                <option value="rate_per_gram">Taxa por Grama (R$/g)</option>
+                <option value="manual">Preço Unitário Manual (R$)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="qt-margin">Margem (%)</label>
+              <input id="qt-margin" class="input tnum" type="number" step="5" value="160" />
+            </div>
+            <div class="field">
+              <label for="qt-rate-g">Taxa por Grama (R$/g)</label>
+              <input id="qt-rate-g" class="input tnum" type="number" step="0.05" value="0.45" />
+            </div>
+            <div class="field">
+              <label for="qt-manual-price">Preço Manual (se manual)</label>
+              <input id="qt-manual-price" class="input tnum" type="number" step="0.5" value="55" />
+            </div>
+          </div>
+          <input id="qt-notes" class="input" type="text" placeholder="Notas técnicas (altura de camada, cores do AMS, prazo combinado)..." />
+          <div class="metrics-row-4" id="qt-live-preview" style="margin:4px 0;"></div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary btn-sm" type="submit">💾 Salvar Orçamento 3D</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="section-bar">
+        <h2 class="section-title">Cotações 3D Salvas</h2>
+        <select id="qt-filter-status" class="select" style="width:auto;">
+          <option value="">Todos os status</option>
+          <option value="Rascunho">Rascunho</option>
+          <option value="Enviada">Enviada</option>
+          <option value="Aprovada">Aprovada</option>
+          <option value="Recusada">Recusada</option>
+        </select>
+      </div>
+      <div id="quotes-list" class="queue-list" style="margin-bottom:28px;"></div>
+
+      <div class="panel">
+        <h2 class="section-title" style="margin-bottom:6px;">Calculadora de Cotação / Compra &amp; Importação (Fornecedores)</h2>
+        <p class="brand-sub" style="margin-bottom:12px;">Simule lotes em R$ ou USD com rateio de frete, impostos e taxa de marketplace antes de fechar compra.</p>
+        <div class="row-4" style="margin-bottom:10px;">
+          <div class="field">
+            <label for="supcalc-currency">Moeda do Lote</label>
+            <select id="supcalc-currency" class="select">
+              <option value="BRL">Real (R$)</option>
+              <option value="USD">Dólar (US$)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="supcalc-lot">Valor do Lote</label>
+            <input id="supcalc-lot" class="input tnum" type="number" step="0.01" value="500" />
+          </div>
+          <div class="field">
+            <label for="supcalc-usd">Cotação USD</label>
+            <input id="supcalc-usd" class="input tnum" type="number" step="0.05" value="5.80" />
+          </div>
+          <div class="field">
+            <label for="supcalc-freight">Frete Total (R$)</label>
+            <input id="supcalc-freight" class="input tnum" type="number" step="0.5" value="45" />
+          </div>
+        </div>
+        <div class="row-4" style="margin-bottom:12px;">
+          <div class="field">
+            <label for="supcalc-tax">Impostos (%)</label>
+            <input id="supcalc-tax" class="input tnum" type="number" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="supcalc-others">Outros Custos (R$)</label>
+            <input id="supcalc-others" class="input tnum" type="number" step="0.5" value="0" />
+          </div>
+          <div class="field">
+            <label for="supcalc-qty">Qtd Unidades no Lote</label>
+            <input id="supcalc-qty" class="input tnum" type="number" min="1" value="10" />
+          </div>
+          <div class="field">
+            <label for="supcalc-margin">Margem Loja (%)</label>
+            <input id="supcalc-margin" class="input tnum" type="number" step="5" value="80" />
+          </div>
+        </div>
+        <div class="row-4" style="margin-bottom:12px;">
+          <div class="field">
+            <label for="supcalc-fee">Taxa Shopee / ML (%)</label>
+            <input id="supcalc-fee" class="input tnum" type="number" step="1" value="18" />
+          </div>
+        </div>
+        <div class="metrics-row-4" id="supcalc-result"></div>
+      </div>
+    </section>
+
+    <!-- ABA 3: MODELOS -->
+    <section id="tab-models" class="tab-panel" hidden>
       <section class="top-grid" aria-label="Importação de links e resumo">
         <div class="panel">
           <p class="panel-label">Coletar Links de Modelos 3D</p>
@@ -379,6 +746,141 @@
           <tbody id="sales-tbody"></tbody>
         </table>
       </div>
+
+      <div class="section-bar" style="margin-top:28px;">
+        <h2 class="section-title">Kits &amp; Combos da Loja</h2>
+      </div>
+      <div class="panel" style="margin-bottom:14px;">
+        <form id="kit-create-form" class="row-4" style="align-items:end;">
+          <div class="field" style="margin:0;">
+            <label for="kit-name">Nome do Kit / Combo *</label>
+            <input id="kit-name" class="input" type="text" placeholder="Ex: Kit Presente Advocacia" required />
+          </div>
+          <div class="field" style="margin:0;">
+            <label for="kit-level">Nível</label>
+            <select id="kit-level" class="select">
+              <option value="Básico">Básico</option>
+              <option value="Médio" selected>Médio</option>
+              <option value="Premium">Premium</option>
+              <option value="Deluxe">Deluxe</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label for="kit-niche">Nicho</label>
+            <select id="kit-niche" class="select"></select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label for="kit-comp-prod">Produto Principal</label>
+            <select id="kit-comp-prod" class="select"></select>
+          </div>
+          <div class="field" style="margin:0;">
+            <label for="kit-price">Preço Kit (R$)</label>
+            <input id="kit-price" class="input tnum" type="number" step="0.5" value="89.9" required />
+          </div>
+          <div class="field" style="margin:0; grid-column: span 2;">
+            <label for="kit-notes">Itens incluídos / embalagem</label>
+            <input id="kit-notes" class="input" type="text" placeholder="Ex: Peça 3D + Caixa Kraft + Laço" />
+          </div>
+          <button class="btn btn-primary btn-sm" type="submit">+ Criar Kit</button>
+        </form>
+      </div>
+      <div id="kits-grid" class="cards-grid-3" style="margin-bottom:28px;"></div>
+
+      <div class="row-2" style="align-items:start;">
+        <div class="panel">
+          <p class="panel-label">10 Nichos Comerciais da Loja Itamarandiba</p>
+          <div id="nichos-list" class="chip-wrap" style="margin-top:8px;"></div>
+        </div>
+        <div class="panel">
+          <p class="panel-label">Gerador de Etiquetas com Código de Barras &amp; Preço</p>
+          <div class="row-3" style="align-items:end; margin-top:8px;">
+            <div class="field" style="margin:0; grid-column: span 2;">
+              <label for="lbl-product">Produto / Peça</label>
+              <select id="lbl-product" class="select"></select>
+            </div>
+            <div class="field" style="margin:0;">
+              <label for="lbl-qty">Qtd Etiquetas</label>
+              <input id="lbl-qty" class="input tnum" type="number" min="1" max="48" value="6" />
+            </div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+            <button id="lbl-print-btn" class="btn btn-secondary btn-sm" type="button">🏷️ Imprimir Etiquetas (Código de Barras)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA CRM: CLIENTES, FORNECEDORES & COMPRAS -->
+    <section id="tab-crm" class="tab-panel" hidden>
+      <div class="section-bar">
+        <h2 class="section-title">Clientes &amp; Histórico de Pedidos</h2>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input id="cust-filter-q" class="input" style="width:200px;" type="search" placeholder="Buscar cliente ou WhatsApp..." />
+          <label class="checkbox-row" style="margin:0;">
+            <input id="cust-filter-bday" type="checkbox" />
+            <span>Aniversariantes do Mês</span>
+          </label>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:14px;">
+        <form id="cust-create-form" class="row-4" style="align-items:end;">
+          <div class="field" style="margin:0;"><label for="cust-name">Nome *</label><input id="cust-name" class="input" type="text" required placeholder="Nome completo" /></div>
+          <div class="field" style="margin:0;"><label for="cust-wa">WhatsApp</label><input id="cust-wa" class="input tnum" type="text" placeholder="38999990000" /></div>
+          <div class="field" style="margin:0;"><label for="cust-city">Cidade</label><input id="cust-city" class="input" type="text" value="Itamarandiba - MG" /></div>
+          <div class="field" style="margin:0;"><label for="cust-bday">Aniversário (DD/MM)</label><input id="cust-bday" class="input tnum" type="text" placeholder="18/11" /></div>
+          <div class="field" style="margin:0; grid-column: span 3;"><label for="cust-notes">Preferências / Observações</label><input id="cust-notes" class="input" type="text" placeholder="Cores preferidas, empresa, detalhes..." /></div>
+          <button class="btn btn-primary btn-sm" type="submit">+ Salvar Cliente</button>
+        </form>
+      </div>
+      <div class="table-wrap" style="margin-bottom:28px;">
+        <table class="data-table">
+          <thead><tr><th>Nome / Obs.</th><th>WhatsApp</th><th>Cidade</th><th>Aniversário</th><th>Histórico</th><th>Ações</th></tr></thead>
+          <tbody id="customers-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="section-bar"><h2 class="section-title">Fornecedores de Filamento &amp; Atacado</h2></div>
+      <div class="panel" style="margin-bottom:14px;">
+        <form id="sup-create-form" class="row-4" style="align-items:end;">
+          <div class="field" style="margin:0;"><label for="sup-name">Fornecedor *</label><input id="sup-name" class="input" type="text" required placeholder="Ex: Voolt3D" /></div>
+          <div class="field" style="margin:0;"><label for="sup-type">Tipo</label><input id="sup-type" class="input" type="text" value="Filamentos / Insumos" /></div>
+          <div class="field" style="margin:0;"><label for="sup-wa">WhatsApp</label><input id="sup-wa" class="input tnum" type="text" placeholder="11999990000" /></div>
+          <div class="field" style="margin:0;"><label for="sup-site">Site / Link</label><input id="sup-site" class="input" type="url" placeholder="https://..." /></div>
+          <div class="field" style="margin:0;"><label for="sup-city">Cidade/UF</label><input id="sup-city" class="input" type="text" placeholder="São Paulo - SP" /></div>
+          <div class="field" style="margin:0;"><label for="sup-lead">Prazo (dias)</label><input id="sup-lead" class="input tnum" type="number" value="5" /></div>
+          <div class="field" style="margin:0;"><label for="sup-min">Pedido Mín. (R$)</label><input id="sup-min" class="input tnum" type="number" step="10" value="200" /></div>
+          <div class="field" style="margin:0;"><label for="sup-notes">Obs.</label><input id="sup-notes" class="input" type="text" /></div>
+          <button class="btn btn-primary btn-sm" type="submit">+ Salvar Fornecedor</button>
+        </form>
+      </div>
+      <div id="suppliers-grid" class="cards-grid-3" style="margin-bottom:28px;"></div>
+
+      <div class="section-bar"><h2 class="section-title">Compras &amp; Reposição de Estoque / Filamento</h2></div>
+      <div class="panel" style="margin-bottom:14px;">
+        <form id="pur-create-form" class="row-4" style="align-items:end;">
+          <div class="field" style="margin:0;"><label for="pur-supplier">Fornecedor</label><select id="pur-supplier" class="select"></select></div>
+          <div class="field" style="margin:0;">
+            <label for="pur-target-kind">Entrar em</label>
+            <select id="pur-target-kind" class="select">
+              <option value="catalog">Estoque Produto / Peça</option>
+              <option value="spool">Carretel de Filamento (kg)</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0;"><label for="pur-target-id">Item / Carretel</label><select id="pur-target-id" class="select"></select></div>
+          <div class="field" style="margin:0;"><label for="pur-item-name">Descrição (se avulso)</label><input id="pur-item-name" class="input" type="text" placeholder="Opcional" /></div>
+          <div class="field" style="margin:0;"><label for="pur-qty">Qtd (un. ou kg)</label><input id="pur-qty" class="input tnum" type="number" min="1" value="1" /></div>
+          <div class="field" style="margin:0;"><label for="pur-unit-cost">Custo Unit. (R$)</label><input id="pur-unit-cost" class="input tnum" type="number" step="0.01" value="110" /></div>
+          <div class="field" style="margin:0;"><label for="pur-freight">Frete (R$)</label><input id="pur-freight" class="input tnum" type="number" step="0.01" value="0" /></div>
+          <div class="field" style="margin:0;"><label for="pur-taxes">Impostos (R$)</label><input id="pur-taxes" class="input tnum" type="number" step="0.01" value="0" /></div>
+          <button class="btn btn-primary btn-sm" type="submit">+ Lançar Compra &amp; Somar Estoque</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Data</th><th>Item</th><th>Fornecedor</th><th>Qtd</th><th>Custo Rateado</th><th>Total</th><th>Ações</th></tr></thead>
+          <tbody id="purchases-tbody"></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- ABA 6: FOTOS & INSTAGRAM -->
@@ -484,12 +986,21 @@
         <div id="listaIdeias" class="sheets-cards-list"></div>
       </div>
 
-      <div class="panel">
-        <p class="panel-label">Conectar Banco de Dados em Planilha Google</p>
-        <p class="brand-sub" style="margin-bottom:10px;">URL do App da Web implantado no Google Apps Script (<code>cloud/google_sheets_backend.gs</code>).</p>
+      <div class="panel" style="margin-bottom:16px;">
+        <p class="panel-label">Sincronização Completa na Nuvem (Planilha Google) &amp; Backup JSON</p>
+        <p class="brand-sub" style="margin-bottom:10px;">Sincronize Clientes, Cotações 3D, Pedidos, Fila de Impressão, Fornecedores e Catálogo entre computador e celular usando a Planilha Google (<code>cloud/google_sheets_backend.gs</code>), ou baixe um backup JSON completo.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+          <button id="btn-sync-erp-sheets" class="btn btn-primary btn-sm" type="button">☁️ Enviar Tudo para Planilha Google</button>
+          <button id="btn-pull-erp-sheets" class="btn btn-secondary btn-sm" type="button">⬇️ Puxar Dados da Planilha Google</button>
+          <button id="btn-export-backup" class="btn btn-secondary btn-sm" type="button">💾 Exportar Backup JSON</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+            📂 Importar Backup JSON
+            <input id="input-import-backup" type="file" accept="application/json,.json" hidden />
+          </label>
+        </div>
         <form id="formConfigSheets" class="sheets-form-row">
           <input id="apiUrlInput" class="input" type="url" required placeholder="https://script.google.com/macros/s/.../exec" />
-          <button type="submit" class="btn btn-secondary btn-sm">Salvar Conexão</button>
+          <button type="submit" class="btn btn-secondary btn-sm">Salvar URL Planilha</button>
         </form>
         <p id="linkPlanilhaWrap" class="brand-sub" style="margin-top:10px;"></p>
       </div>

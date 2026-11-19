@@ -1,3 +1,4 @@
+import { createErpController } from "./erp_store.js";
 import { createHubController } from "./hub_tabs.js";
 import {
   apiJson,
@@ -14,7 +15,7 @@ const PAGE_LIMIT = 48;
 const state = {
   meta: null,
   modelSubcategories: [],
-  activeTab: "models",
+  activeTab: "dashboard",
   items: [],
   total: 0,
   offset: 0,
@@ -41,6 +42,7 @@ const state = {
 };
 
 let hubCtrl = null;
+let erpCtrl = null;
 
 function colorSwatchHtml(colorName) {
   const colorMeta = state.meta?.colors?.find((c) => c.name === colorName);
@@ -130,6 +132,12 @@ async function refreshSummary() {
     document.getElementById("badge-catalog").textContent = s.catalog_total;
     document.getElementById("badge-media").textContent = s.media_total;
     document.getElementById("badge-archived").textContent = s.archived_total ?? 0;
+    const bOrd = document.getElementById("badge-orders");
+    const bQt = document.getElementById("badge-quotes");
+    const bCrm = document.getElementById("badge-crm");
+    if (bOrd) bOrd.textContent = s.sales_total ?? 0;
+    if (bQt) bQt.textContent = s.quotes_open ?? 0;
+    if (bCrm) bCrm.textContent = s.customers_total ?? 0;
   } catch {
     // Non-blocking topbar badge refresh
   }
@@ -143,6 +151,7 @@ async function switchTab(tabName) {
   document.querySelectorAll(".tab-panel").forEach((panel) => {
     panel.hidden = panel.id !== `tab-${tabName}`;
   });
+  if (erpCtrl) await erpCtrl.onTabSwitched(tabName);
   if (!hubCtrl) return;
   if (tabName === "queue") await hubCtrl.renderQueueTab();
   else if (tabName === "printers") await hubCtrl.renderPrintersTab();
@@ -310,6 +319,7 @@ function renderModels(data) {
             <a class="btn btn-ghost btn-xs" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>
             <div class="card-actions">
               <button class="btn btn-accent btn-xs model-queue-btn" data-id="${item.id}" type="button">+ Fila</button>
+              <button class="btn btn-secondary btn-xs model-quote-btn" data-id="${item.id}" type="button">Orçar</button>
               <button class="btn btn-secondary btn-xs model-edit-btn" data-id="${item.id}" type="button">Editar</button>
               <button class="btn btn-ghost btn-xs model-archive-btn" data-id="${item.id}" type="button" title="Mover para Arquivados">Arquivar</button>
             </div>
@@ -321,6 +331,13 @@ function renderModels(data) {
 
   grid.querySelectorAll(".model-edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => openEditDrawer(Number(btn.dataset.id)));
+  });
+
+  grid.querySelectorAll(".model-quote-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const m = state.items.find((x) => Number(x.id) === Number(btn.dataset.id));
+      if (m && erpCtrl) erpCtrl.openQuoteWithModel(m);
+    });
   });
 
   grid.querySelectorAll(".model-config-img-btn").forEach((btn) => {
@@ -895,8 +912,15 @@ async function init() {
     },
   });
   hubCtrl.bindEvents();
+  erpCtrl = createErpController({ refreshSummary, switchTab });
+  erpCtrl.bindErpEvents();
   bindModelsEvents();
-  await Promise.all([refreshModelSubcategories(), fetchModels(true), refreshSummary()]);
+  await Promise.all([
+    refreshModelSubcategories(),
+    fetchModels(true),
+    refreshSummary(),
+    erpCtrl.renderDashboardTab(),
+  ]);
 }
 
 init().catch((err) => {
