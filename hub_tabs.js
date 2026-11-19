@@ -1,4 +1,4 @@
-import { apiJson, escapeHtml, formatBrl, formatDateTimePtBr, formatDuration, formatGrams, showToast } from "./utils.js";
+import { apiJson, escapeHtml, formatBrl, formatDateTimePtBr, formatDuration, formatGrams, showToast } from "./utils.js?v=2.1.0";
 
 export function createHubController({ meta, refreshSummary, switchTab, reloadModels, onSubcategoriesChanged, applyModelSubcatFilter }) {
   const hubState = {

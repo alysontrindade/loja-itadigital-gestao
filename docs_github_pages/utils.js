@@ -1,4 +1,4 @@
-import { handleServerlessApi } from "./serverless_hub.js";
+import { handleServerlessApi } from "./serverless_hub.js?v=2.1.0";
 
 let toastTimer = null;
 

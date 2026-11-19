@@ -3,8 +3,8 @@ import {
   getFullErpState,
   importFullHubBackupJson,
   mergeRemoteErpData,
-} from "./serverless_hub.js";
-import { apiJson, escapeHtml, formatBrl, formatDateTimePtBr, formatDuration, formatGrams, showToast } from "./utils.js";
+} from "./serverless_hub.js?v=2.1.0";
+import { apiJson, escapeHtml, formatBrl, formatDateTimePtBr, formatDuration, formatGrams, showToast } from "./utils.js?v=2.1.0";
 
 function cleanPhone(raw) {
   let digits = String(raw || "").replace(/\D+/g, "");

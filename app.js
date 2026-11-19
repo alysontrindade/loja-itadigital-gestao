@@ -1,5 +1,5 @@
-import { createErpController } from "./erp_store.js";
-import { createHubController } from "./hub_tabs.js";
+import { createErpController } from "./erp_store.js?v=2.1.0";
+import { createHubController } from "./hub_tabs.js?v=2.1.0";
 import {
   apiJson,
   escapeHtml,
@@ -8,7 +8,7 @@ import {
   formatGrams,
   showToast,
   toLocalDatetimeInputValue,
-} from "./utils.js";
+} from "./utils.js?v=2.1.0";
 
 const PAGE_LIMIT = 48;
 

@@ -67,8 +67,14 @@ async function loadState() {
   if (!initPromise) {
     initPromise = (async () => {
       const savedV2 = await idbGet(IDB_KEY);
-      if (savedV2 && savedV2.meta && Array.isArray(savedV2.models)) {
-        savedV2.nichos = savedV2.nichos || [];
+      if (
+        savedV2 &&
+        savedV2.meta &&
+        Array.isArray(savedV2.models) &&
+        savedV2.models.length >= 100 &&
+        Array.isArray(savedV2.nichos) &&
+        savedV2.nichos.length > 0
+      ) {
         savedV2.customers = savedV2.customers || [];
         savedV2.suppliers = savedV2.suppliers || [];
         savedV2.purchases = savedV2.purchases || [];

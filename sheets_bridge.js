@@ -1,4 +1,4 @@
-import { escapeHtml, formatBrl, showToast } from "./utils.js";
+import { escapeHtml, formatBrl, showToast } from "./utils.js?v=2.1.0";
 
 const DEFAULT_API_URL =
   "https://script.google.com/macros/s/AKfycbzj7BsmnH8WLBWh1z6iW5yhjDx5WKXVzLnEDoemlVU_i1T1hRuExBz5hyq6BO5QwXWUVw/exec";
