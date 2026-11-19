@@ -77,6 +77,10 @@
        {% if request.blueprint == 'extras' %}aria-current="page"{% endif %}>
       <svg class="icon"><use href="#i-barcode"/></svg>Ferramentas Extras
     </a>
+    <a class="nav-item" href="{{ url_for('fila3d.hub') }}"
+       {% if request.blueprint == 'fila3d' %}aria-current="page"{% endif %}>
+      <svg class="icon"><use href="#i-layers"/></svg>Fila &amp; Hub 3D (Ita Arte)
+    </a>
     <a class="nav-item" href="{{ url_for('ideias_3d.listar') }}"
        {% if request.blueprint == 'ideias_3d' %}aria-current="page"{% endif %}>
       <svg class="icon"><use href="#i-box"/></svg>Ideias 3D (Robô 06h)

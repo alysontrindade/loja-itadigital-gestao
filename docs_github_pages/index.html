@@ -1,130 +1,1152 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Loja ItaDigital — Gestão &amp; Notas de Impressão 3D</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loja ItaDigital &amp; Ita Arte 3D — Hub Completo de Impressão 3D</title>
+  <link rel="icon" href="./ita-arte-3d.ico" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <div class="brand-badge">ID</div>
-      <div>
-        <h1>Loja ItaDigital &amp; Ita Arte 3D</h1>
-        <p>GitHub Pages + Planilha Google + Robô Local 06h</p>
+    <div class="topbar-inner">
+      <div class="topbar-row">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">IA3D</div>
+          <div>
+            <h1>Loja ItaDigital &amp; Ita Arte 3D — Hub Operacional</h1>
+            <p class="brand-sub">Modelos MakerWorld, Fila por Impressora, Estoque, Catálogo de Vendas &amp; Estúdio Instagram</p>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <span class="sheets-status-pill" id="connStatus">Planilha Google...</span>
+          <a class="btn btn-secondary btn-sm" href="./catalogo-publico.html" target="_blank" rel="noopener noreferrer">Catálogo Público / PDF</a>
+          <button id="open-ext-modal-btn" class="btn btn-secondary btn-sm" type="button">Extensão Chrome</button>
+          <button id="quick-new-job-btn" class="btn btn-accent btn-sm" type="button">+ Na Fila</button>
+        </div>
       </div>
+
+      <nav class="tabs-bar" aria-label="Módulos do sistema">
+        <button class="tab-btn active" data-tab="models" type="button">
+          Modelos <span id="badge-models" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="queue" type="button">
+          Fila de Impressão <span id="badge-queue" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="printers" type="button">
+          Impressoras <span id="badge-printers" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="inventory" type="button">
+          Estoque <span id="badge-inventory" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="catalog" type="button">
+          Catálogo &amp; Vendas <span id="badge-catalog" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="media" type="button">
+          Fotos &amp; Instagram <span id="badge-media" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="archived" type="button">
+          Arquivados <span id="badge-archived" class="tab-count tnum">0</span>
+        </button>
+        <button class="tab-btn" data-tab="ideias" type="button">
+          💡 Ideias 06h &amp; Planilha
+        </button>
+      </nav>
     </div>
-    <div class="status-pill" id="connStatus">Conectando à Planilha Google...</div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="ideias">💡 Ideias de Impressão 3D</button>
-    <button class="tab" data-tab="produtos">📦 Produtos &amp; Estoque</button>
-    <button class="tab" data-tab="vendas">🛒 Vendas</button>
-    <button class="tab" data-tab="config">⚙️ Conectar Planilha Google</button>
-  </nav>
+  <main class="page">
+    <div id="error-banner" class="error-banner" role="alert" hidden>
+      <span id="error-text"></span>
+      <button id="retry-btn" class="btn btn-secondary btn-sm" type="button">Tentar novamente</button>
+    </div>
 
-  <main class="container">
-    <!-- TAB IDEIAS 3D -->
-    <section id="tab-ideias" class="panel active">
-      <div class="card">
-        <h2>Nova Nota / Ideia de Impressão 3D</h2>
-        <p class="muted">Digite apenas o nome da peça ou ideia pelo celular ou computador. O robô local das 06h busca no MakerWorld, Mercado Livre e Shopee, confere o tamanho comercial e fatia automaticamente.</p>
-        <form id="formIdeia" class="form-row">
-          <input id="termoIdeia" type="text" required placeholder="Ex.: suporte controle ps5, vaso robert plant, placa pix..." />
-          <input id="obsIdeia" type="text" placeholder="Observação rápida (opcional)" />
-          <button type="submit" class="btn-primary">+ Anotar Ideia</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>Ideias Registradas (<span id="qtdIdeias">0</span>)</h2>
-          <button class="btn-outline" id="btnRecarregar">↻ Atualizar Dados</button>
+    <!-- ABA 1: MODELOS -->
+    <section id="tab-models" class="tab-panel">
+      <section class="top-grid" aria-label="Importação de links e resumo">
+        <div class="panel">
+          <p class="panel-label">Coletar Links de Modelos 3D</p>
+          <form id="ingest-form" class="ingest-form">
+            <textarea
+              id="ingest-links"
+              class="ingest-textarea"
+              placeholder="Cole aqui links do MakerWorld, Printables, Thingiverse... Ex: https://makerworld.com/en/models/..."
+            ></textarea>
+            <div class="ingest-footer">
+              <span class="ingest-hint">Registra data/hora, nicho, filamento e cores automaticamente.</span>
+              <div style="display:flex; gap:8px;">
+                <button id="seed-demo-btn" class="btn btn-secondary btn-sm" type="button">Inserir Exemplos</button>
+                <button id="ingest-submit" class="btn btn-primary btn-sm" type="submit">Coletar Links</button>
+              </div>
+            </div>
+          </form>
         </div>
-        <div id="listaIdeias" class="cards-list"></div>
+
+        <div class="panel">
+          <p class="panel-label">Resumo do Filtro Atual</p>
+          <div class="metrics-grid">
+            <div class="metric-tile">
+              <div id="metric-total" class="metric-value tnum">0</div>
+              <div class="metric-caption">Modelos encontrados</div>
+            </div>
+            <div class="metric-tile">
+              <div id="metric-grams" class="metric-value tnum">0 g</div>
+              <div class="metric-caption">Filamento estimado</div>
+            </div>
+            <div class="metric-tile">
+              <div id="metric-queue" class="metric-value tnum">0</div>
+              <div class="metric-caption">Na Fila (modelos)</div>
+            </div>
+            <div class="metric-tile">
+              <div id="metric-multicolor" class="metric-value tnum">0</div>
+              <div class="metric-caption">Aceitam Todas as Cores</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <aside class="filters-panel" aria-label="Filtros de modelos">
+          <div class="filters-header">
+            <h2 class="filters-title">Filtros</h2>
+            <button id="clear-filters-btn" class="btn btn-ghost btn-xs" type="button">Limpar tudo</button>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-q">Buscar modelo</label>
+            <input id="filter-q" class="input" type="search" placeholder="Nome, tag, observação..." />
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Status do Modelo</span>
+            <div id="filter-status-chips" class="chip-wrap"></div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-category">Catálogo / Nicho</label>
+            <select id="filter-category" class="select">
+              <option value="">Todos os nichos</option>
+            </select>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0 4px;">
+              <label class="filter-label" for="filter-subcategory" style="margin:0;">Subcategoria</label>
+              <button id="models-manage-subs-btn" class="btn btn-ghost btn-xs" type="button">Gerenciar</button>
+            </div>
+            <select id="filter-subcategory" class="select">
+              <option value="">Todas as subcategorias</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Data e Hora da Coleta</span>
+            <div class="chip-wrap" style="margin-bottom:8px;">
+              <button class="chip date-preset active" type="button" data-preset="">Qualquer</button>
+              <button class="chip date-preset" type="button" data-preset="today">Hoje</button>
+              <button class="chip date-preset" type="button" data-preset="7d">7 dias</button>
+            </div>
+            <div class="row-2">
+              <input id="filter-from" class="input tnum" type="datetime-local" title="Coletado a partir de" />
+              <input id="filter-to" class="input tnum" type="datetime-local" title="Coletado até" />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Tamanho da Impressão</span>
+            <div id="filter-size-chips" class="chip-wrap" style="margin-bottom:8px;"></div>
+            <input id="filter-max-mm" class="input tnum" type="number" min="1" step="1" placeholder="Dimensão máx (mm) Ex: 256" />
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Quantidade de Filamento (g)</span>
+            <div class="chip-wrap" style="margin-bottom:8px;">
+              <button class="chip gram-preset active" type="button" data-min="" data-max="">Qualquer</button>
+              <button class="chip gram-preset" type="button" data-min="" data-max="50">≤ 50g</button>
+              <button class="chip gram-preset" type="button" data-min="51" data-max="200">51–200g</button>
+              <button class="chip gram-preset" type="button" data-min="201" data-max="">&gt; 200g</button>
+            </div>
+            <div class="row-2">
+              <input id="filter-min-grams" class="input tnum" type="number" min="0" step="1" placeholder="Mín (g)" />
+              <input id="filter-max-grams" class="input tnum" type="number" min="0" step="1" placeholder="Máx (g)" />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="filter-filament">Filamento Indicado</label>
+            <select id="filter-filament" class="select">
+              <option value="">Todos os filamentos</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Cor Mais Indicada</span>
+            <div id="filter-color-chips" class="chip-wrap"></div>
+            <label class="checkbox-row">
+              <input id="filter-include-multicolor" type="checkbox" checked />
+              <span>Incluir "Multicolor / Todas as Cores"</span>
+            </label>
+          </div>
+        </aside>
+
+        <section aria-label="Lista paginada de modelos">
+          <div class="catalog-toolbar">
+            <div id="results-summary" class="results-summary tnum">Carregando modelos...</div>
+            <div class="sort-wrap">
+              <button id="enrich-images-btn" class="btn btn-secondary btn-sm" type="button" title="Busca capas e dados via API do MakerWorld para todos os modelos sem imagem e configura o link automaticamente">Buscar Todas as Imagens</button>
+              <label class="filter-label" for="sort-select">Ordenar:</label>
+              <select id="sort-select" class="select" style="width:auto;">
+                <option value="collected_desc">Coleta mais recente</option>
+                <option value="collected_asc">Coleta mais antiga</option>
+                <option value="grams_asc">Menor filamento (g)</option>
+                <option value="grams_desc">Maior filamento (g)</option>
+                <option value="size_asc">Menor dimensão (mm)</option>
+                <option value="size_desc">Maior dimensão (mm)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="loading-state" class="state-box" hidden>
+            <h2>Carregando modelos...</h2>
+          </div>
+
+          <div id="empty-state" class="state-box" hidden>
+            <h2 id="empty-title">Nenhum modelo encontrado</h2>
+            <p id="empty-desc">Ajuste os filtros ou cole novos links do MakerWorld acima.</p>
+            <button id="empty-clear-btn" class="btn btn-secondary btn-sm" type="button" hidden>Limpar filtros</button>
+          </div>
+
+          <div id="cards-grid" class="cards-grid"></div>
+
+          <div id="pagination-bar" class="pagination-bar" hidden>
+            <button id="page-prev-btn" class="btn btn-secondary btn-sm" type="button">← Anterior</button>
+            <span id="page-info" class="results-summary tnum">Página 1</span>
+            <button id="page-next-btn" class="btn btn-secondary btn-sm" type="button">Próxima →</button>
+          </div>
+        </section>
       </div>
     </section>
 
-    <!-- TAB PRODUTOS -->
-    <section id="tab-produtos" class="panel">
-      <div class="card">
-        <h2>Cadastrar Produto Rápido</h2>
-        <form id="formProduto" class="form-grid">
-          <input id="prodNome" type="text" required placeholder="Nome do produto" />
-          <input id="prodSku" type="text" placeholder="SKU (opcional)" />
-          <input id="prodNicho" type="text" placeholder="Nicho (ex.: 3D, Presentes)" />
-          <input id="prodCusto" type="number" step="0.01" placeholder="Custo (R$)" />
-          <input id="prodPreco" type="number" step="0.01" required placeholder="Preço Venda (R$)" />
-          <input id="prodEstoque" type="number" placeholder="Estoque" value="1" />
-          <button type="submit" class="btn-primary">+ Salvar Produto</button>
-        </form>
-      </div>
-      <div class="card">
-        <h2>Catálogo na Planilha (<span id="qtdProdutos">0</span>)</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>SKU</th><th>Nome</th><th>Nicho</th><th>Custo</th><th>Preço</th><th>Estoque</th></tr>
-            </thead>
-            <tbody id="tbodyProdutos"></tbody>
-          </table>
+    <!-- ABA 2: FILA DE IMPRESSÃO -->
+    <section id="tab-queue" class="tab-panel" hidden>
+      <div class="metrics-row-4" id="queue-metrics"></div>
+      <div class="section-bar">
+        <div>
+          <h2 class="section-title">Filas de Impressão por Impressora &amp; Rubrica</h2>
+          <p class="brand-sub">Organize cada impressora por rubrica (ex: Larissa Advogada), verifique filamento e perfil de fatiamento antes de rodar.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="queue-rubrics-btn" class="btn btn-secondary btn-sm" type="button">Gerenciar Rubricas</button>
+          <button id="queue-slicing-btn" class="btn btn-secondary btn-sm" type="button">Perfis de Fatiamento</button>
+          <button id="queue-add-btn" class="btn btn-primary btn-sm" type="button">+ Novo Trabalho na Fila</button>
         </div>
       </div>
+      <div class="queue-filters-bar">
+        <input id="queue-filter-q" class="input" type="search" placeholder="Buscar peça, cliente, rubrica ou variável de fatiamento..." style="min-width:220px; flex:2;" />
+        <select id="queue-filter-printer" class="select" style="width:auto;">
+          <option value="">Todas as impressoras</option>
+        </select>
+        <select id="queue-filter-rubric" class="select" style="width:auto;">
+          <option value="">Todas as rubricas</option>
+        </select>
+        <select id="queue-filter-slicing" class="select" style="width:auto;">
+          <option value="">Todos os perfis</option>
+        </select>
+        <select id="queue-filter-spool" class="select" style="width:auto;">
+          <option value="">Todos os filamentos</option>
+        </select>
+        <select id="queue-filter-target" class="select" style="width:auto;">
+          <option value="">Todas finalidades</option>
+          <option value="Encomenda">Encomenda</option>
+          <option value="Estoque">Estoque</option>
+          <option value="Teste / Pessoal">Teste / Pessoal</option>
+        </select>
+        <select id="queue-filter-status" class="select" style="width:auto;">
+          <option value="">Todos os status</option>
+          <option value="Pendente">Pendente</option>
+          <option value="Em Impressão">Em Impressão</option>
+          <option value="Concluída">Concluída</option>
+          <option value="Falhou">Falhou</option>
+          <option value="Cancelada">Cancelada</option>
+        </select>
+        <select id="queue-filter-priority" class="select" style="width:auto;">
+          <option value="">Todas prioridades</option>
+          <option value="Urgente">Urgente</option>
+          <option value="Alta">Alta</option>
+          <option value="Normal">Normal</option>
+          <option value="Baixa">Baixa</option>
+        </select>
+        <select id="queue-group-mode" class="select" style="width:auto;">
+          <option value="printer">Agrupar: Por Impressora</option>
+          <option value="rubric">Agrupar: Por Rubrica</option>
+          <option value="flat">Lista Única</option>
+        </select>
+        <button id="queue-clear-filters-btn" class="btn btn-ghost btn-sm" type="button">Limpar</button>
+      </div>
+      <div id="queue-list" class="queue-list"></div>
     </section>
 
-    <!-- TAB VENDAS -->
-    <section id="tab-vendas" class="panel">
-      <div class="card">
-        <h2>Registrar Venda</h2>
-        <form id="formVenda" class="form-grid">
-          <input id="vendaCliente" type="text" placeholder="Cliente (opcional)" value="Consumidor Final" />
-          <input id="vendaItens" type="text" required placeholder="Itens vendidos (ex.: 1x Porta Controle 3D)" />
-          <select id="vendaPagamento">
-            <option value="pix">Pix</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao_credito">Cartão Crédito</option>
-            <option value="cartao_debito">Cartão Débito</option>
+    <!-- ABA 3: IMPRESSORAS -->
+    <section id="tab-printers" class="tab-panel" hidden>
+      <div class="section-bar">
+        <div>
+          <h2 class="section-title">Parque de Impressoras 3D</h2>
+          <p class="brand-sub">Cadastre suas impressoras, volume de mesa, AMS e acompanhe o que está rodando em cada uma.</p>
+        </div>
+        <button id="printer-add-btn" class="btn btn-primary btn-sm" type="button">+ Cadastrar Impressora</button>
+      </div>
+      <div id="printers-grid" class="cards-grid-3"></div>
+    </section>
+
+    <!-- ABA 4: ESTOQUE -->
+    <section id="tab-inventory" class="tab-panel" hidden>
+      <div class="metrics-row-4" id="inventory-metrics"></div>
+
+      <div class="section-bar">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <h2 class="section-title">Carretéis de Filamento</h2>
+          <select id="spool-filter-material" class="select" style="width:auto;">
+            <option value="">Todos os materiais</option>
           </select>
-          <select id="vendaCanal">
-            <option value="loja">Loja Física</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="shopee">Shopee</option>
-            <option value="mercadolivre">Mercado Livre</option>
-          </select>
-          <input id="vendaTotal" type="number" step="0.01" required placeholder="Total (R$)" />
-          <button type="submit" class="btn-primary">✓ Lançar Venda</button>
-        </form>
-      </div>
-      <div class="card">
-        <h2>Últimas Vendas</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Data</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Canal</th><th>Total</th></tr>
-            </thead>
-            <tbody id="tbodyVendas"></tbody>
-          </table>
+          <label class="checkbox-row" style="margin:0;">
+            <input id="spool-filter-low" type="checkbox" />
+            <span>Apenas estoque baixo</span>
+          </label>
         </div>
+        <button id="spool-add-btn" class="btn btn-primary btn-sm" type="button">+ Adicionar Carretel</button>
+      </div>
+      <div id="spools-grid" class="cards-grid-3" style="margin-bottom:28px;"></div>
+
+      <div class="section-bar">
+        <h2 class="section-title">Produtos Prontos em Estoque (Pronta Entrega)</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Código / Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Qtd Pronta</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="ready-stock-tbody"></tbody>
+        </table>
       </div>
     </section>
 
-    <!-- TAB CONFIG -->
-    <section id="tab-config" class="panel">
-      <div class="card">
-        <h2>Conectar Banco de Dados em Planilha Google</h2>
-        <p class="muted">Cole abaixo a URL do App da Web implantado no Google Apps Script (<code>cloud/google_sheets_backend.gs</code>). Ela fica salva no navegador e também pode ser passada na URL como <code>?api=SUA_URL</code>.</p>
-        <form id="formConfig" class="form-row">
-          <input id="apiUrlInput" type="url" required placeholder="https://script.google.com/macros/s/.../exec" />
-          <button type="submit" class="btn-primary">Salvar Conexão</button>
+    <!-- ABA 5: CATÁLOGO & VENDAS -->
+    <section id="tab-catalog" class="tab-panel" hidden>
+      <div class="metrics-row-4" id="catalog-metrics"></div>
+
+      <div class="section-bar">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <h2 class="section-title">Catálogo de Vendas — Ita Arte 3D</h2>
+          <input id="catalog-filter-q" class="input" style="width:200px;" type="search" placeholder="Buscar produto ou #código..." />
+          <select id="catalog-filter-category" class="select" style="width:auto;">
+            <option value="">Todas categorias</option>
+          </select>
+          <select id="catalog-filter-subcategory" class="select" style="width:auto;">
+            <option value="">Todas subcategorias</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="catalog-manage-subs-btn" class="btn btn-secondary btn-sm" type="button">Gerenciar Subcategorias</button>
+          <button id="catalog-import-ita-btn" class="btn btn-secondary btn-sm" type="button">Sincronizar catalogo-ita-arte-3d</button>
+          <button id="sale-add-btn" class="btn btn-accent btn-sm" type="button">+ Registrar Venda</button>
+          <button id="catalog-add-btn" class="btn btn-primary btn-sm" type="button">+ Novo Produto</button>
+        </div>
+      </div>
+
+      <div id="catalog-grid" class="cards-grid" style="margin-bottom:28px;"></div>
+
+      <div class="section-bar">
+        <h2 class="section-title">Histórico de Vendas &amp; Encomendas</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Produto</th>
+              <th>Cliente / Canal</th>
+              <th>Qtd</th>
+              <th>Total</th>
+              <th>Pagamento</th>
+              <th>Entrega</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="sales-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ABA 6: FOTOS & INSTAGRAM -->
+    <section id="tab-media" class="tab-panel" hidden>
+      <div class="metrics-row-4" id="media-metrics"></div>
+
+      <div id="media-dropzone" class="dropzone">
+        <form id="media-upload-form" style="display:flex; flex-direction:column; gap:10px; width:100%;">
+          <div class="field" style="margin:0;">
+            <label for="media-up-url">Link da imagem (URL — preferencial)</label>
+            <input id="media-up-url" class="input" type="url" placeholder="https://makerworld.bblmw.com/... ou link direto da foto" />
+          </div>
+          <div class="row-2">
+            <input id="media-up-title" class="input" type="text" placeholder="Título da peça / foto (ex: Balança da Justiça Dourada)" />
+            <select id="media-up-format" class="select">
+              <option value="Feed">Feed</option>
+              <option value="Carrossel">Carrossel</option>
+              <option value="Reels">Reels</option>
+              <option value="Stories">Stories</option>
+            </select>
+          </div>
+          <div class="row-2">
+            <select id="media-up-catalog" class="select">
+              <option value="">Vincular ao catálogo (opcional)</option>
+            </select>
+            <select id="media-up-job" class="select">
+              <option value="">Vincular a impressão (opcional)</option>
+            </select>
+          </div>
+          <label class="drop-trigger" for="media-file-input" style="padding:10px;">
+            <strong>Ou arraste fotos locais / clique para enviar arquivo (opcional)</strong>
+            <span class="ingest-hint">Preferimos salvar por link URL acima; se enviar arquivo local, ele vai para <code>data/media/posts/</code></span>
+            <input id="media-file-input" type="file" accept="image/*" multiple hidden />
+          </label>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span id="media-selected-count" class="ingest-hint">Cole um link URL acima (preferencial) ou selecione arquivo.</span>
+            <button class="btn btn-primary btn-sm" type="submit">Salvar Foto (Link / Upload)</button>
+          </div>
         </form>
-        <p id="linkPlanilhaWrap" style="margin-top:12px;"></p>
+      </div>
+
+      <div class="section-bar">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <h2 class="section-title">Banco de Fotos &amp; Planejamento Instagram</h2>
+          <select id="media-filter-status" class="select" style="width:auto;">
+            <option value="">Todos os status</option>
+            <option value="Banco de Fotos">Banco de Fotos</option>
+            <option value="Legenda Pronta">Legenda Pronta</option>
+            <option value="Agendado">Agendado</option>
+            <option value="Postado">Postado</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="media-grid" class="cards-grid-3"></div>
+    </section>
+
+    <!-- ABA 7: ARQUIVADOS -->
+    <section id="tab-archived" class="tab-panel" hidden>
+      <div class="section-header-bar">
+        <div>
+          <h2 class="section-title">Itens Arquivados</h2>
+          <p class="section-subtitle">Modelos e trabalhos ocultados do catálogo principal. Você pode restaurar ou excluir definitivamente.</p>
+        </div>
+      </div>
+
+      <div id="archived-metrics" class="metrics-row metrics-row-4"></div>
+
+      <div class="section-header-bar" style="margin-top:18px;">
+        <h3 class="panel-heading">Modelos Arquivados</h3>
+      </div>
+      <div id="archived-models-grid" class="cards-grid"></div>
+
+      <div class="section-header-bar" style="margin-top:24px;">
+        <h3 class="panel-heading">Trabalhos da Fila Arquivados</h3>
+      </div>
+      <div id="archived-jobs-list" class="queue-list"></div>
+    </section>
+
+    <!-- ABA 8: IDEIAS 06H & PLANILHA GOOGLE -->
+    <section id="tab-ideias" class="tab-panel" hidden>
+      <div class="section-bar">
+        <div>
+          <h2 class="section-title">Ideias de Impressão 3D (Robô 06h) &amp; Planilha Google</h2>
+          <p class="brand-sub">Anote nomes de peças pelo celular ou PC. O robô local das 06h busca no MakerWorld, Mercado Livre e Shopee, confere dimensões e fatia automaticamente.</p>
+        </div>
+        <button id="btnRecarregarSheets" class="btn btn-secondary btn-sm" type="button">↻ Atualizar Planilha</button>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px;">
+        <p class="panel-label">Nova Nota / Ideia de Impressão 3D</p>
+        <form id="formIdeia" class="sheets-form-row">
+          <input id="termoIdeia" class="input" type="text" required placeholder="Ex.: suporte controle ps5, vaso robert plant, placa pix..." />
+          <input id="obsIdeia" class="input" type="text" placeholder="Observação rápida (opcional)" />
+          <button type="submit" class="btn btn-primary btn-sm">+ Anotar Ideia</button>
+        </form>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <p class="panel-label" style="margin:0;">Ideias Registradas (<span id="qtdIdeias">0</span>)</p>
+        </div>
+        <div id="listaIdeias" class="sheets-cards-list"></div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-label">Conectar Banco de Dados em Planilha Google</p>
+        <p class="brand-sub" style="margin-bottom:10px;">URL do App da Web implantado no Google Apps Script (<code>cloud/google_sheets_backend.gs</code>).</p>
+        <form id="formConfigSheets" class="sheets-form-row">
+          <input id="apiUrlInput" class="input" type="url" required placeholder="https://script.google.com/macros/s/.../exec" />
+          <button type="submit" class="btn btn-secondary btn-sm">Salvar Conexão</button>
+        </form>
+        <p id="linkPlanilhaWrap" class="brand-sub" style="margin-top:10px;"></p>
       </div>
     </section>
   </main>
 
-  <div id="toast" class="toast"></div>
-  <script src="app.js"></script>
+  <!-- Drawer de Edição de Modelo -->
+  <div id="edit-backdrop" class="modal-backdrop" hidden>
+    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <div class="drawer-header">
+        <h2 id="drawer-title">Editar Modelo 3D</h2>
+        <button id="drawer-close-btn" class="btn btn-ghost btn-sm" type="button">Fechar</button>
+      </div>
+      <form id="edit-form" class="drawer-body">
+        <input type="hidden" id="edit-id" />
+        <div class="field">
+          <label for="edit-title">Nome do Modelo</label>
+          <input id="edit-title" class="input" type="text" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="edit-category">Catálogo / Nicho</label>
+            <select id="edit-category" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="edit-subcategory">Subcategoria</label>
+            <select id="edit-subcategory" class="select">
+              <option value="">Sem subcategoria</option>
+            </select>
+          </div>
+        </div>
+        <div class="class-picker-bar">
+          <div class="class-picker-top">
+            <span class="class-picker-hint">Vincule quantas categorias/subcategorias quiser</span>
+            <button id="edit-add-class-btn" class="btn btn-secondary btn-xs" type="button">+ Vincular selecionada</button>
+          </div>
+          <div id="edit-classifications-list" class="class-chips-wrap"></div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="edit-status">Status</label>
+            <select id="edit-status" class="select">
+              <option value="Na Fila">Na Fila</option>
+              <option value="Imprimindo">Imprimindo</option>
+              <option value="Impresso">Impresso</option>
+              <option value="Arquivado">Arquivado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="edit-size-tier">Tamanho</label>
+            <select id="edit-size-tier" class="select"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="edit-dimensions">Dimensões (mm)</label>
+          <input id="edit-dimensions" class="input tnum" type="text" placeholder="120 x 80 x 45 mm" />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="edit-grams">Filamento (g)</label>
+            <input id="edit-grams" class="input tnum" type="number" min="0" step="0.1" />
+          </div>
+          <div class="field">
+            <label for="edit-time">Tempo (min)</label>
+            <input id="edit-time" class="input tnum" type="number" min="0" step="1" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Filamentos Indicados</label>
+          <div id="edit-filaments-wrap" class="chip-wrap"></div>
+        </div>
+        <div class="field">
+          <label>Cores Mais Indicadas</label>
+          <div id="edit-colors-wrap" class="chip-wrap"></div>
+        </div>
+        <div class="field">
+          <label for="edit-reason">Justificativa</label>
+          <input id="edit-reason" class="input" type="text" />
+        </div>
+        <div class="field">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="edit-image-url" style="margin:0;">Link da Imagem (URL — Preferencial)</label>
+            <button id="edit-enrich-btn" class="btn btn-secondary btn-xs" type="button">Buscar do MakerWorld</button>
+          </div>
+          <input id="edit-image-url" class="input" type="url" placeholder="https://makerworld.bblmw.com/..." />
+          <img id="edit-image-preview" class="drawer-img-preview" alt="Prévia do modelo" hidden />
+        </div>
+        <div class="field">
+          <label for="edit-notes">Observações de Impressão</label>
+          <textarea id="edit-notes" class="textarea"></textarea>
+        </div>
+      </form>
+      <div class="drawer-footer">
+        <button id="drawer-delete-btn" class="btn btn-danger btn-sm" type="button">Excluir</button>
+        <div style="display:flex; gap:8px;">
+          <button id="drawer-to-catalog-btn" class="btn btn-secondary btn-sm" type="button">+ Catálogo</button>
+          <button id="drawer-cancel-btn" class="btn btn-ghost btn-sm" type="button">Cancelar</button>
+          <button id="drawer-save-btn" class="btn btn-primary btn-sm" type="submit" form="edit-form">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Trabalho na Fila -->
+  <div id="job-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog dialog-wide" role="dialog" aria-modal="true">
+      <h2 id="job-modal-title">Adicionar na Fila de Impressão</h2>
+      <form id="job-form" style="display:flex; flex-direction:column; gap:11px; overflow-y:auto; padding-right:2px;">
+        <input type="hidden" id="job-id" />
+        <input type="hidden" id="job-model-id" />
+        <input type="hidden" id="job-catalog-id" />
+        <div class="field">
+          <label for="job-title">Peça / Trabalho</label>
+          <input id="job-title" class="input" type="text" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="job-rubric">Rubrica (Projeto / Cliente / Grupo)</label>
+            <select id="job-rubric" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="job-rubric-new">Ou criar nova rubrica rápida</label>
+            <div style="display:flex; gap:6px;">
+              <input id="job-rubric-new" class="input" type="text" placeholder="Ex: Larissa Advogada" />
+              <button id="job-rubric-quick-add" class="btn btn-secondary btn-sm" type="button">+ Criar</button>
+            </div>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="job-printer">1. Verificar Impressora *</label>
+            <select id="job-printer" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="job-spool">2. Verificar Filamento (Carretel) *</label>
+            <select id="job-spool" class="select"></select>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="job-slicing-profile">3. Verificar Perfil de Fatiamento *</label>
+            <select id="job-slicing-profile" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="job-target">Finalidade</label>
+            <select id="job-target" class="select">
+              <option value="Encomenda">Encomenda</option>
+              <option value="Estoque">Estoque</option>
+              <option value="Teste / Pessoal">Teste / Pessoal</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="job-slicing-notes">Observações de Fatiamento (alterações nas variáveis: paredes, infill, suporte, temperatura, brim...)</label>
+          <textarea id="job-slicing-notes" class="textarea" style="min-height:62px;" placeholder="Ex: Alterado para 3 paredes, infill gyroid 20%, suporte árvore na mesa, velocidade reduzida para 80%..."></textarea>
+        </div>
+        <div class="row-4">
+          <div class="field">
+            <label for="job-qty">Qtd Peças</label>
+            <input id="job-qty" class="input tnum" type="number" min="1" value="1" />
+          </div>
+          <div class="field">
+            <label for="job-priority">Prioridade</label>
+            <select id="job-priority" class="select">
+              <option value="Normal">Normal</option>
+              <option value="Alta">Alta</option>
+              <option value="Urgente">Urgente</option>
+              <option value="Baixa">Baixa</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="job-grams">Filamento Total (g)</label>
+            <input id="job-grams" class="input tnum" type="number" min="0" step="0.1" value="50" />
+          </div>
+          <div class="field">
+            <label for="job-time">Tempo Est. (min)</label>
+            <input id="job-time" class="input tnum" type="number" min="0" value="60" />
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="job-customer">Cliente (se encomenda)</label>
+            <input id="job-customer" class="input" type="text" />
+          </div>
+          <div class="field">
+            <label for="job-notes">Observações Gerais (AMS, cor, prazo)</label>
+            <input id="job-notes" class="input" type="text" />
+          </div>
+        </div>
+        <div id="job-verify-banner" class="verify-banner"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+          <button id="job-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button id="job-submit-btn" class="btn btn-primary btn-sm" type="submit">Adicionar na Fila</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Concluir / Falha -->
+  <div id="finish-job-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="finish-job-title">Finalizar Impressão</h2>
+      <form id="finish-job-form" style="display:flex; flex-direction:column; gap:12px;">
+        <input type="hidden" id="finish-job-id" />
+        <input type="hidden" id="finish-job-status" />
+        <div class="field">
+          <label for="finish-job-grams">Filamento real gasto (g) — será descontado do carretel</label>
+          <input id="finish-job-grams" class="input tnum" type="number" min="0" step="0.1" required />
+        </div>
+        <div class="field" id="finish-reason-wrap" hidden>
+          <label for="finish-job-reason">Motivo da falha</label>
+          <input id="finish-job-reason" class="input" type="text" placeholder="Ex: Descolou da mesa, filamento enroscou..." />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="finish-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Impressora -->
+  <div id="printer-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="printer-modal-title">Cadastrar Impressora</h2>
+      <form id="printer-form" style="display:flex; flex-direction:column; gap:11px;">
+        <input type="hidden" id="pr-id" />
+        <div class="row-2">
+          <div class="field">
+            <label for="pr-name">Apelido da Impressora</label>
+            <input id="pr-name" class="input" type="text" placeholder="Bambu Lab A1 - Bancada 1" required />
+          </div>
+          <div class="field">
+            <label for="pr-model">Marca / Modelo</label>
+            <input id="pr-model" class="input" type="text" value="Bambu Lab A1" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="pr-volume">Volume (mm)</label>
+            <input id="pr-volume" class="input tnum" type="text" value="256 x 256 x 256 mm" />
+          </div>
+          <div class="field">
+            <label for="pr-max-dim">Máx (mm)</label>
+            <input id="pr-max-dim" class="input tnum" type="number" value="256" />
+          </div>
+          <div class="field">
+            <label for="pr-nozzle">Bico (mm)</label>
+            <input id="pr-nozzle" class="input tnum" type="number" step="0.1" value="0.4" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="pr-ams-slots">Slots AMS</label>
+            <input id="pr-ams-slots" class="input tnum" type="number" min="0" max="16" value="4" />
+          </div>
+          <div class="field">
+            <label for="pr-hourly">Custo/hora (R$)</label>
+            <input id="pr-hourly" class="input tnum" type="number" step="0.1" value="2.5" />
+          </div>
+          <div class="field">
+            <label for="pr-status">Status</label>
+            <select id="pr-status" class="select">
+              <option value="Disponível">Disponível</option>
+              <option value="Imprimindo">Imprimindo</option>
+              <option value="Pausada">Pausada</option>
+              <option value="Manutenção">Manutenção</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="pr-notes">Observações</label>
+          <input id="pr-notes" class="input" type="text" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="pr-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Salvar Impressora</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Carretel -->
+  <div id="spool-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="spool-modal-title">Carretel de Filamento</h2>
+      <form id="spool-form" style="display:flex; flex-direction:column; gap:11px;">
+        <input type="hidden" id="sp-id" />
+        <div class="row-3">
+          <div class="field">
+            <label for="sp-brand">Marca</label>
+            <input id="sp-brand" class="input" type="text" placeholder="Voolt3D, Bambu, eSUN" />
+          </div>
+          <div class="field">
+            <label for="sp-material">Material</label>
+            <select id="sp-material" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="sp-color-name">Cor</label>
+            <input id="sp-color-name" class="input" type="text" placeholder="Preto Fosco" required />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="sp-hex">Cor visual</label>
+            <input id="sp-hex" class="input" type="color" value="#171717" style="height:36px; padding:2px;" />
+          </div>
+          <div class="field">
+            <label for="sp-initial">Peso inicial (g)</label>
+            <input id="sp-initial" class="input tnum" type="number" step="1" value="1000" />
+          </div>
+          <div class="field">
+            <label for="sp-remaining">Restante (g)</label>
+            <input id="sp-remaining" class="input tnum" type="number" step="1" value="1000" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="sp-alert">Alerta mínimo (g)</label>
+            <input id="sp-alert" class="input tnum" type="number" step="1" value="150" />
+          </div>
+          <div class="field">
+            <label for="sp-cost">Valor pago (R$/kg)</label>
+            <input id="sp-cost" class="input tnum" type="number" step="1" value="120" />
+          </div>
+          <div class="field">
+            <label for="sp-location">Local / Slot</label>
+            <input id="sp-location" class="input" type="text" placeholder="AMS Slot 1" />
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="sp-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Salvar Carretel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Produto Catálogo -->
+  <div id="catalog-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="catalog-modal-title">Produto do Catálogo Ita Arte 3D</h2>
+      <form id="catalog-form" style="display:flex; flex-direction:column; gap:11px;">
+        <input type="hidden" id="cat-id" />
+        <input type="hidden" id="cat-model-id" />
+        <div class="row-3">
+          <div class="field">
+            <label for="cat-code">Código</label>
+            <input id="cat-code" class="input" type="text" placeholder="#15" />
+          </div>
+          <div class="field" style="grid-column: span 2;">
+            <label for="cat-name">Nome do Produto</label>
+            <input id="cat-name" class="input" type="text" required />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="cat-category">Categoria</label>
+            <input id="cat-category" class="input" type="text" list="cat-category-list" value="Decoração" />
+            <datalist id="cat-category-list"></datalist>
+          </div>
+          <div class="field">
+            <label for="cat-subcategory">Subcategoria</label>
+            <select id="cat-subcategory" class="select">
+              <option value="">Sem subcategoria</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cat-dims">Dimensões (cm)</label>
+            <input id="cat-dims" class="input" type="text" placeholder="12 × 8 × 6 cm" />
+          </div>
+        </div>
+        <div class="class-picker-bar">
+          <div class="class-picker-top">
+            <span class="class-picker-hint">Categorias/subcategorias do produto no catálogo</span>
+            <button id="cat-add-class-btn" class="btn btn-secondary btn-xs" type="button">+ Vincular selecionada</button>
+          </div>
+          <div id="cat-classifications-list" class="class-chips-wrap"></div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="cat-grams">Filamento (g)</label>
+            <input id="cat-grams" class="input tnum" type="number" step="0.1" value="50" />
+          </div>
+          <div class="field">
+            <label for="cat-mode">Precificação</label>
+            <select id="cat-mode" class="select">
+              <option value="rate_per_gram">Por grama (R$/g)</option>
+              <option value="cost_markup">Custo + Margem (%)</option>
+              <option value="manual">Preço Manual</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cat-rate">Taxa (R$/g) ou Preço</label>
+            <input id="cat-rate" class="input tnum" type="number" step="0.01" value="0.40" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="cat-extras">Extras (argola/embal.) R$</label>
+            <input id="cat-extras" class="input tnum" type="number" step="0.1" value="0" />
+          </div>
+          <div class="field">
+            <label for="cat-stock">Estoque Pronta Entrega</label>
+            <input id="cat-stock" class="input tnum" type="number" min="0" value="0" />
+          </div>
+          <div class="field">
+            <label for="cat-manual-price">Preço Final (se manual)</label>
+            <input id="cat-manual-price" class="input tnum" type="number" step="0.5" value="20" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="cat-image">Link da imagem (URL — preferencial)</label>
+          <input id="cat-image" class="input" type="text" placeholder="https://makerworld.bblmw.com/... (ou /media/...)" />
+          <img id="cat-image-preview" class="drawer-img-preview" alt="Prévia do produto" hidden />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="cat-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Salvar Produto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Venda -->
+  <div id="sale-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2>Registrar Venda / Encomenda</h2>
+      <form id="sale-form" style="display:flex; flex-direction:column; gap:11px;">
+        <div class="field">
+          <label for="sale-catalog">Produto do Catálogo</label>
+          <select id="sale-catalog" class="select"></select>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="sale-customer">Cliente</label>
+            <input id="sale-customer" class="input" type="text" placeholder="Nome ou @instagram" />
+          </div>
+          <div class="field">
+            <label for="sale-channel">Canal</label>
+            <select id="sale-channel" class="select">
+              <option value="Instagram">Instagram</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Shopee / ML">Shopee / ML</option>
+              <option value="Presencial">Presencial</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="sale-qty">Quantidade</label>
+            <input id="sale-qty" class="input tnum" type="number" min="1" value="1" />
+          </div>
+          <div class="field">
+            <label for="sale-price">Valor Unit. (R$)</label>
+            <input id="sale-price" class="input tnum" type="number" step="0.1" value="20" />
+          </div>
+          <div class="field">
+            <label for="sale-payment">Pagamento</label>
+            <select id="sale-payment" class="select">
+              <option value="Pago">Pago</option>
+              <option value="Sinal 50%">Sinal 50%</option>
+              <option value="Pendente">Pendente</option>
+            </select>
+          </div>
+        </div>
+        <label class="checkbox-row">
+          <input id="sale-auto-queue" type="checkbox" checked />
+          <span>Se faltar em pronta entrega, enviar o saldo automaticamente para a Fila de Impressão</span>
+        </label>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="sale-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Confirmar Venda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Editar Mídia / Instagram -->
+  <div id="media-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2>Editar Postagem Instagram</h2>
+      <form id="media-edit-form" style="display:flex; flex-direction:column; gap:11px;">
+        <input type="hidden" id="med-id" />
+        <div class="field">
+          <label for="med-title">Título / Peça</label>
+          <input id="med-title" class="input" type="text" required />
+        </div>
+        <div class="field">
+          <label for="med-file-url">Link da Imagem (URL — Preferencial)</label>
+          <input id="med-file-url" class="input" type="text" placeholder="https://..." />
+          <img id="med-image-preview" class="drawer-img-preview" alt="Prévia da foto" hidden />
+        </div>
+        <div class="row-3">
+          <div class="field">
+            <label for="med-format">Formato</label>
+            <select id="med-format" class="select">
+              <option value="Feed">Feed</option>
+              <option value="Carrossel">Carrossel</option>
+              <option value="Reels">Reels</option>
+              <option value="Stories">Stories</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="med-status">Status</label>
+            <select id="med-status" class="select">
+              <option value="Banco de Fotos">Banco de Fotos</option>
+              <option value="Legenda Pronta">Legenda Pronta</option>
+              <option value="Agendado">Agendado</option>
+              <option value="Postado">Postado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="med-date">Data sugerida</label>
+            <input id="med-date" class="input" type="date" />
+          </div>
+        </div>
+        <div class="field">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="med-caption" style="margin:0;">Legenda</label>
+            <button id="med-gen-caption-btn" class="btn btn-secondary btn-xs" type="button">Gerar Legenda Ita Arte 3D</button>
+          </div>
+          <textarea id="med-caption" class="textarea" style="min-height:110px;"></textarea>
+        </div>
+        <div class="field">
+          <label for="med-hashtags">Hashtags</label>
+          <input id="med-hashtags" class="input" type="text" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="med-cancel-btn" class="btn btn-secondary btn-sm" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" type="submit">Salvar Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Gerenciar Subcategorias -->
+  <div id="subcat-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog dialog-wide" role="dialog" aria-modal="true" aria-labelledby="subcat-modal-title">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+        <h2 id="subcat-modal-title" style="margin:0;">Gerenciar Subcategorias</h2>
+        <button id="subcat-close-btn" class="btn btn-ghost btn-sm" type="button">Fechar</button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+        <select id="subcat-scope" class="select" style="width:auto;">
+          <option value="sales_catalog">Catálogo de Vendas</option>
+          <option value="models">Modelos 3D (Nicho)</option>
+        </select>
+        <select id="subcat-filter-cat" class="select" style="width:auto; flex:1;">
+          <option value="">Todas as categorias</option>
+        </select>
+        <button id="subcat-reclassify-btn" class="btn btn-secondary btn-sm" type="button" title="Reanalisa todos os modelos e produtos permitindo múltiplas categorias e subcategorias">Reclassificar Tudo</button>
+      </div>
+      <form id="subcat-create-form" style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; padding:10px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md);">
+        <div class="field" style="margin:0;">
+          <label for="subcat-parent-cat">Categoria Pai</label>
+          <input id="subcat-parent-cat" class="input" type="text" list="subcat-cat-datalist" placeholder="Ex: Direito & Advocacia" required />
+          <datalist id="subcat-cat-datalist"></datalist>
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="subcat-new-name">Nova Subcategoria</label>
+          <input id="subcat-new-name" class="input" type="text" placeholder="Ex: Placas de Escritório" required />
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">+ Criar</button>
+      </form>
+      <div id="subcat-list" class="subcat-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal Gerenciar Rubricas -->
+  <div id="rubrics-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog dialog-wide" role="dialog" aria-modal="true" aria-labelledby="rubrics-modal-title">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+        <h2 id="rubrics-modal-title" style="margin:0;">Gerenciar Rubricas de Impressão</h2>
+        <button id="rubrics-close-btn" class="btn btn-ghost btn-sm" type="button">Fechar</button>
+      </div>
+      <p class="brand-sub" style="margin:0 0 10px;">Crie rubricas (ex: <strong>Larissa Advogada</strong>) para categorizar impressões em todas as impressoras.</p>
+      <form id="rubric-create-form" style="display:grid; grid-template-columns:1.3fr auto 1.4fr auto; gap:8px; align-items:end; padding:10px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md);">
+        <div class="field" style="margin:0;">
+          <label for="rubric-new-name">Nome da Rubrica</label>
+          <input id="rubric-new-name" class="input" type="text" placeholder="Ex: Larissa Advogada" required />
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="rubric-new-color">Cor</label>
+          <input id="rubric-new-color" class="input" type="color" value="#22d3ee" style="width:46px; padding:2px; height:36px;" />
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="rubric-new-notes">Observação padrão</label>
+          <input id="rubric-new-notes" class="input" type="text" placeholder="Ex: Peças preto fosco + dourado" />
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">+ Criar</button>
+      </form>
+      <div id="rubrics-list" class="subcat-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal Perfis de Fatiamento -->
+  <div id="slicing-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog dialog-wide" role="dialog" aria-modal="true" aria-labelledby="slicing-modal-title">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+        <h2 id="slicing-modal-title" style="margin:0;">Perfis de Fatiamento &amp; Altura de Camada</h2>
+        <button id="slicing-close-btn" class="btn btn-ghost btn-sm" type="button">Fechar</button>
+      </div>
+      <p class="brand-sub" style="margin:0 0 10px;">Padrões de altura de camada (0.08 a 0.32 mm) e registro de alterações nas variáveis de fatiamento.</p>
+      <form id="slicing-create-form" style="display:grid; grid-template-columns:1.2fr 0.7fr 1.6fr auto; gap:8px; align-items:end; padding:10px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-md);">
+        <div class="field" style="margin:0;">
+          <label for="slicing-new-name">Nome do Perfil</label>
+          <input id="slicing-new-name" class="input" type="text" placeholder="Ex: 0.20 mm — Alta Resistência" required />
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="slicing-new-layer">Camada (mm)</label>
+          <input id="slicing-new-layer" class="input tnum" type="number" step="0.01" min="0.04" max="2.0" value="0.20" required />
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="slicing-new-notes">Obs. variáveis de fatiamento</label>
+          <input id="slicing-new-notes" class="input" type="text" placeholder="Ex: 4 paredes, gyroid 25%, brim 5mm" />
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">+ Salvar</button>
+      </form>
+      <div id="slicing-list" class="subcat-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal da Extensão -->
+  <div id="ext-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ext-title">
+      <h2 id="ext-title">Capturar Abas Abertas do MakerWorld</h2>
+      <p style="margin:0 0 10px; color: var(--fg-2); font-size: 13px;">
+        Carregue a pasta abaixo em <code>chrome://extensions</code> (Modo desenvolvedor) para enviar todas as abas abertas diretamente para o Hub:
+      </p>
+      <code class="code-path">H:\Meu Drive\ANTIGRAVITY\fila-impressao-3d\extension</code>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button id="ext-close-btn" class="btn btn-primary btn-sm" type="button">Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox de Foto do Modelo -->
+  <div id="lightbox-backdrop" class="modal-backdrop" hidden>
+    <div class="dialog dialog-lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-title">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+        <h2 id="lightbox-title" style="margin:0;">Prévia do Modelo</h2>
+        <button id="lightbox-close-btn" class="btn btn-ghost btn-sm" type="button">Fechar</button>
+      </div>
+      <img id="lightbox-img" class="lightbox-img" alt="" />
+      <p id="lightbox-meta" class="brand-sub tnum" style="margin:10px 0 14px;"></p>
+      <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <a id="lightbox-link" class="btn btn-secondary btn-sm" href="#" target="_blank" rel="noopener noreferrer">Abrir no MakerWorld ↗</a>
+        <button id="lightbox-queue-btn" class="btn btn-accent btn-sm" type="button">+ Adicionar na Fila</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="./app.js"></script>
+  <script type="module" src="./sheets_bridge.js"></script>
 </body>
 </html>

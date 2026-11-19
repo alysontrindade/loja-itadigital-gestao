@@ -10,6 +10,7 @@ from app.routes import (
     compras,
     estoque,
     extras,
+    fila3d,
     fornecedores,
     ideias_3d,
     kits,
@@ -60,6 +61,7 @@ def create_app(test_config: Mapping[str, Any] | None = None) -> Flask:
     app.register_blueprint(relatorios.bp)
     app.register_blueprint(extras.bp)
     app.register_blueprint(ideias_3d.bp)
+    app.register_blueprint(fila3d.bp)
 
     @app.before_request
     def _proteger_requisicao():
