@@ -1285,13 +1285,13 @@ export async function handleServerlessApi(rawUrl, options = {}) {
           : catItem
             ? Number(catItem.sale_price_brl || 0)
             : 0;
-      const unitCost = body.unit_cost_brl != null
+      const unitCost = body.unit_cost_brl != null && Number(body.unit_cost_brl) > 0
         ? Number(body.unit_cost_brl)
         : kitItem
           ? Number(kitItem.total_cost_brl || 0)
           : catItem
             ? Number(catItem.unit_cost_brl || 0)
-            : 0;
+            : Math.round(unitPrice * 0.4 * 100) / 100;
       const discount = Math.max(0, Number(body.discount_brl || 0));
       const freight = Math.max(0, Number(body.freight_brl || 0));
       const total = Math.max(0, Math.round((qty * unitPrice - discount + freight) * 100) / 100);

@@ -509,12 +509,14 @@ export function createHubController({ meta, refreshSummary, switchTab, reloadMod
         const pGrams = pJobs.filter((i) => i.status === "Pendente" || i.status === "Em Impressão").reduce((acc, i) => acc + i.estimated_grams, 0);
         const pActive = pJobs.filter((i) => i.status === "Em Impressão").length;
         const pPend = pJobs.filter((i) => i.status === "Pendente").length;
+        const liveStatus = pActive > 0 ? "Imprimindo" : p.status;
+        const liveBadgeClass = pActive > 0 ? "badge-warn" : statusBadgeClass(p.status);
         sections.push(`
           <section class="printer-queue-section">
             <header class="printer-queue-header">
               <div class="printer-queue-title-wrap">
                 <h3 class="printer-queue-title">${escapeHtml(p.name)}</h3>
-                <span class="badge ${statusBadgeClass(p.status)}">${escapeHtml(p.status)}</span>
+                <span class="badge ${liveBadgeClass}">${escapeHtml(liveStatus)}</span>
                 <span class="brand-sub tnum">${escapeHtml(p.brand_model)} • Bico ${p.nozzle_mm} mm • ${pActive} imprimindo · ${pPend} pendentes · ${formatGrams(pGrams)}</span>
               </div>
               <button class="btn btn-primary btn-xs printer-queue-add-btn" data-printer-id="${p.id}" type="button">+ Adicionar nesta impressora</button>
@@ -790,7 +792,7 @@ export function createHubController({ meta, refreshSummary, switchTab, reloadMod
                 <span class="badge ${s.is_low_stock ? "badge-danger" : "badge-success"}">${s.is_low_stock ? "Estoque Baixo" : "OK"}</span>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
-                <span class="swatch" style="background:${escapeHtml(s.color_hex)}; width:16px; height:16px;"></span>
+                <span class="swatch" style="background:${escapeHtml(s.color_hex)}; width:16px; height:16px; border:1px solid rgba(255,255,255,0.4); box-shadow:0 0 0 1px rgba(0,0,0,0.5);"></span>
                 <h3 class="card-title">${escapeHtml(s.color_name)}</h3>
               </div>
               <div class="progress-track">
@@ -1992,9 +1994,9 @@ export function createHubController({ meta, refreshSummary, switchTab, reloadMod
 
     document.getElementById("archived-metrics").innerHTML = `
       <div class="metric-card"><span class="metric-label">Total Arquivado</span><span class="metric-value tnum">${modelsData.total + archivedJobs.length}</span></div>
-      <div class="metric-card"><span class="metric-label">Modelos Arquivados</span><span class="metric-value tnum">${modelsData.total}</span></div>
-      <div class="metric-card"><span class="metric-label">Trabalhos na Fila</span><span class="metric-value tnum">${archivedJobs.length}</span></div>
-      <div class="metric-card"><span class="metric-label">Filamento Poupado</span><span class="metric-value tnum">${formatGrams(savedGrams)}</span></div>
+      <div class="metric-tile"><div class="metric-value tnum">${modelsData.total}</div><div class="metric-caption">Modelos Arquivados</div></div>
+      <div class="metric-tile"><div class="metric-value tnum">${archivedJobs.length}</div><div class="metric-caption">Trabalhos na Fila</div></div>
+      <div class="metric-tile"><div class="metric-value tnum">${formatGrams(savedGrams)}</div><div class="metric-caption">Filamento Poupado</div></div>
     `;
 
     const modelsGrid = document.getElementById("archived-models-grid");
